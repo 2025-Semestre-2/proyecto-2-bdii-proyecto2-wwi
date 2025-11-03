@@ -1,0 +1,181 @@
+.detail-wrap{
+  max-width:1200px;
+  margin:22px auto 30px;
+  padding:0 18px;
+}
+
+.detail-head{
+  display:grid;
+  grid-template-columns: 160px 1fr 160px;
+  align-items:center;
+  gap:12px;
+  margin:6px 0 16px;
+}
+.detail-title{
+  text-align:center;
+  color:#6e4a2f;
+  font-size:30px;
+  letter-spacing:.3px;
+  margin:0;
+  text-shadow:0 1px 0 #fff;
+}
+
+.detail-layout{
+  display:grid;
+  grid-template-columns: 1.1fr 1fr;
+  grid-template-areas:
+    "map info"
+    "addr contacts";
+  gap:16px;
+}
+.card-map{ grid-area: map; }
+.card-block:nth-of-type(2){ grid-area: info; }
+.card-block:nth-of-type(3){ grid-area: addr; }
+.card-block:nth-of-type(4){ grid-area: contacts; }
+
+.card{
+  background:#fff;
+  border:1px solid rgba(93,66,42,.18);
+  border-radius:16px;
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.08),
+    0 1px 0 rgba(255,255,255,.6) inset;
+}
+.card-block{ padding:14px 16px 12px; }
+
+.card-header{
+  display:flex; align-items:center; gap:10px;
+  font-weight:700; color:#5e3f28;
+  padding:10px 12px;
+  background:linear-gradient(180deg, #f7efe7 0%, #efe5da 100%);
+  border-radius:14px 14px 0 0;
+  border-bottom:1px solid rgba(93,66,42,.18);
+}
+
+.kv{ display:flex; gap:14px; padding:10px 12px; }
+.kv.alt{ background:linear-gradient(180deg, #fff 0%, #faf5f2 100%); }
+.k{ min-width:200px; color:#6f4f35; font-weight:700; }
+.v{ color:#2a2a2a; }
+.v.strong{ font-weight:700; }
+.v a{ color:#1b5dbf; text-decoration:none; }
+.v a:hover{ text-decoration:underline; }
+.v { overflow-wrap:anywhere; }
+
+.pill{
+  display:inline-block;
+  padding:4px 10px;
+  background:#f3e6da;
+  color:#5a3e29;
+  border:1px solid rgba(93,66,42,.25);
+  border-radius:999px;
+  font-weight:600;
+  font-size:.92rem;
+}
+
+.card-map{ padding:10px; }
+.card-map iframe{
+  width:100%; height:360px; border:0; border-radius:12px;
+  box-shadow:0 8px 18px rgba(0,0,0,.08);
+}
+.map-placeholder{
+  height:360px; display:flex; align-items:center; justify-content:center;
+  color:#7a5d47; background:#fbf8f5;
+  border:1px dashed rgba(75,50,30,.25); border-radius:12px;
+}
+
+@media (max-width: 1000px){
+  .detail-layout{
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "map"
+      "info"
+      "addr"
+      "contacts";
+  }
+  .k{ min-width:160px; }
+}
+
+@media (max-width: 520px){
+  .detail-head{ grid-template-columns: 1fr; }
+  .detail-title{ text-align:left; font-size:26px; }
+  .k{ min-width:140px; }
+  .card-map iframe, .map-placeholder{ height:300px; }
+}
+
+.detail-layout.proveedores{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "map map"
+    "info bank"
+    "addr contacts";
+  gap:16px;
+}
+
+.area-map{ grid-area: map; }
+.area-info{ grid-area: info; }
+.area-bank{ grid-area: bank; }
+.area-addr{ grid-area: addr; }
+.area-contacts{ grid-area: contacts; }
+
+.detail-layout.proveedores .card-block .kv { padding:10px 12px; }
+.detail-layout.proveedores .card-block .kv.alt{
+  background:linear-gradient(180deg, #fff 0%, #faf5f2 100%);
+}
+
+@media (max-width: 1000px){
+  .detail-layout.proveedores{
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "map"
+      "info"
+      "bank"
+      "addr"
+      "contacts";
+  }
+}
+
+.detail-layout.proveedores .card-block:nth-of-type(2),
+.detail-layout.proveedores .card-block:nth-of-type(3),
+.detail-layout.proveedores .card-block:nth-of-type(4){
+  grid-area: unset !important;
+}
+
+.detail-layout.proveedores{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "map map"
+    "info bank"
+    "addr contacts";
+  gap:16px;
+}
+.area-map{ grid-area: map; }
+.area-info{ grid-area: info; }
+.area-bank{ grid-area: bank; }
+.area-addr{ grid-area: addr; }
+.area-contacts{ grid-area: contacts; }
+
+.kv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #eee;
+  padding: 4px 0;
+}
+
+.kv .k {
+  font-weight: 600;
+  color: #5a4633;
+}
+
+.kv .v {
+  text-align: right;
+  color: #444;
+}
+
