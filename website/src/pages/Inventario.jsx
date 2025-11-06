@@ -8,27 +8,40 @@ import { useNavigate } from "react-router-dom";
 export default function Inventario() {
   const navigate = useNavigate();
 
-  
   const [search, setSearch] = useState("");
-
   const [rawRows, setRawRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
 
- 
+  // Datos de referencia para los dropdowns
+  const [suppliers, setSuppliers] = useState([]);
+  const [colors, setColors] = useState([]);
+  const [packageTypes, setPackageTypes] = useState([]);
+  const [stockGroups, setStockGroups] = useState([]);
+
   const emptyForm = {
-    StockItemName: "",
+    NombreProducto: "",
     SupplierID: "",
+    ColorID: "",
     UnitPackageID: "",
     OuterPackageID: "",
-    QuantityPerOuter: "",
-    UnitPrice: "",
-    RecommendedRetailPrice: "",
-    TaxRate: "",
-    TypicalWeightPerUnit: "",
+    CantidadEmpaquetamiento: "",
+    Marca: "",
+    Talla: "",
+    Impuesto: "",
+    PrecioUnitario: "",
+    PrecioVenta: "",
+    Peso: "",
+    CantidadDisponible: "",
+    Ubicacion: "",
+    TiempoEntrega: "0",
+    RequiereFrio: false,
+    CodigoBarras: "",
+    StockGroupIDs: [],
   };
+
   const [showModal, setShowModal] = useState(false);
-  const [mode, setMode] = useState("new"); 
+  const [mode, setMode] = useState("new");
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -48,8 +61,27 @@ export default function Inventario() {
     }
   };
 
+  // Cargar datos de referencia
+  const loadReferenceData = async () => {
+    try {
+      const [suppliersData, colorsData, packagesData, groupsData] = await Promise.all([
+        api.getSuppliers(),
+        api.getColors(),
+        api.getPackageTypes(),
+        api.getStockGroups(),
+      ]);
+      setSuppliers(suppliersData || []);
+      setColors(colorsData || []);
+      setPackageTypes(packagesData || []);
+      setStockGroups(groupsData || []);
+    } catch (e) {
+      console.error("Error cargando datos de referencia:", e);
+    }
+  };
+
   useEffect(() => {
     load();
+    loadReferenceData();
   }, []);
 
   const rows = useMemo(() => {
@@ -77,18 +109,47 @@ export default function Inventario() {
     ev?.stopPropagation?.();
     setMode("edit");
     setEditId(row.stockitemid);
-    setForm((f) => ({
-      ...f,
-      StockItemName: row.nombreproducto || "",
-      SupplierID: "",
-      UnitPackageID: "",
-      OuterPackageID: "",
-      QuantityPerOuter: "",
-      UnitPrice: "",
-      RecommendedRetailPrice: "",
-      TaxRate: "",
-      TypicalWeightPerUnit: "",
-    }));
+    
+    try {
+      // Cargar los detalles completos del producto
+      const details = await api.getItem(row.stockitemid);
+      const general = details?.general || {};
+      const holdings = details?.holdings || {};
+      const proveedor = details?.proveedor || {};
+      
+      // Cargar los grupos asociados al producto
+      const productGroups = await api.getProductStockGroups(row.stockitemid);
+      const groupIDs = productGroups.map(g => g.StockGroupID);
+      
+      // Usar SupplierID del general (tabla StockItems) o del proveedor como fallback
+      const supplierId = general.SupplierID || proveedor.SupplierID || "";
+      
+      setForm({
+        NombreProducto: general.StockItemName || "",
+        SupplierID: supplierId,
+        ColorID: general.ColorID || "",
+        UnitPackageID: general.UnitPackageID || "",
+        OuterPackageID: general.OuterPackageID || "",
+        CantidadEmpaquetamiento: general.QuantityPerOuter || "",
+        Marca: general.Brand || "",
+        Talla: general.Size || "",
+        Impuesto: general.TaxRate !== null && general.TaxRate !== undefined ? general.TaxRate : "",
+        PrecioUnitario: general.UnitPrice !== null && general.UnitPrice !== undefined ? general.UnitPrice : "",
+        PrecioVenta: general.RecommendedRetailPrice !== null && general.RecommendedRetailPrice !== undefined ? general.RecommendedRetailPrice : "",
+        Peso: general.TypicalWeightPerUnit || "",
+        CantidadDisponible: holdings.QuantityOnHand !== null && holdings.QuantityOnHand !== undefined ? holdings.QuantityOnHand : "",
+        Ubicacion: holdings.BinLocation || "",
+        TiempoEntrega: general.LeadTimeDays !== null && general.LeadTimeDays !== undefined ? general.LeadTimeDays : "0",
+        RequiereFrio: general.IsChillerStock || false,
+        CodigoBarras: general.Barcode || "",
+        StockGroupIDs: groupIDs,
+      });
+    } catch (e) {
+      console.error("Error cargando detalles del producto:", e);
+      alert("Error cargando los detalles del producto");
+      return;
+    }
+    
     setShowModal(true);
   };
 
@@ -100,35 +161,46 @@ export default function Inventario() {
   };
 
   const onSave = async () => {
-    const name = (form.StockItemName || "").trim();
-    if (!name) return alert("El nombre es obligatorio.");
-    if (!form.SupplierID) return alert("SupplierID es obligatorio.");
-    if (!form.UnitPackageID) return alert("UnitPackageID es obligatorio.");
-    if (!form.OuterPackageID) return alert("OuterPackageID es obligatorio.");
-    if (!form.QuantityPerOuter) return alert("QuantityPerOuter es obligatorio.");
-    if (form.UnitPrice === "" || form.UnitPrice == null) return alert("UnitPrice es obligatorio.");
-    if (form.RecommendedRetailPrice === "" || form.RecommendedRetailPrice == null) return alert("RecommendedRetailPrice es obligatorio.");
-    if (form.TaxRate === "" || form.TaxRate == null) return alert("TaxRate es obligatorio.");
-    if (form.TypicalWeightPerUnit === "" || form.TypicalWeightPerUnit == null) return alert("TypicalWeightPerUnit es obligatorio.");
-
+    // Validaciones básicas
+    if (!form.NombreProducto.trim()) return alert("El nombre del producto es obligatorio.");
+    if (!form.SupplierID) return alert("Debe seleccionar un proveedor.");
+    if (!form.UnitPackageID) return alert("Debe seleccionar un tipo de empaque unitario.");
+    if (!form.OuterPackageID) return alert("Debe seleccionar un tipo de empaque externo.");
+    if (!form.CantidadEmpaquetamiento) return alert("La cantidad por empaquetamiento es obligatoria.");
+    if (form.Impuesto === "" || form.Impuesto == null) return alert("El impuesto es obligatorio.");
+    if (form.PrecioUnitario === "" || form.PrecioUnitario == null) return alert("El precio unitario es obligatorio.");
+    if (form.PrecioVenta === "" || form.PrecioVenta == null) return alert("El precio de venta es obligatorio.");
+    
+    // Preparar el payload
     const payload = {
-      StockItemName: name,
+      NombreProducto: form.NombreProducto.trim(),
       SupplierID: Number(form.SupplierID),
+      ColorID: form.ColorID ? Number(form.ColorID) : null,
       UnitPackageID: Number(form.UnitPackageID),
       OuterPackageID: Number(form.OuterPackageID),
-      QuantityPerOuter: Number(form.QuantityPerOuter),
-      UnitPrice: Number(form.UnitPrice),
-      RecommendedRetailPrice: Number(form.RecommendedRetailPrice),
-      TaxRate: Number(form.TaxRate),
-      TypicalWeightPerUnit: Number(form.TypicalWeightPerUnit),
+      CantidadEmpaquetamiento: Number(form.CantidadEmpaquetamiento),
+      Marca: form.Marca.trim() || null,
+      Talla: form.Talla.trim() || null,
+      Impuesto: Number(form.Impuesto),
+      PrecioUnitario: Number(form.PrecioUnitario),
+      PrecioVenta: Number(form.PrecioVenta),
+      Peso: form.Peso ? Number(form.Peso) : null,
+      CantidadDisponible: form.CantidadDisponible ? Number(form.CantidadDisponible) : 0,
+      Ubicacion: form.Ubicacion.trim() || null,
+      TiempoEntrega: Number(form.TiempoEntrega) || 0,
+      RequiereFrio: form.RequiereFrio,
+      CodigoBarras: form.CodigoBarras.trim() || null,
+      StockGroupIDs: form.StockGroupIDs.length > 0 ? form.StockGroupIDs.join(',') : null,
     };
 
     setSaving(true);
     try {
       if (mode === "new") {
         await api.createItem(payload);
+        alert("Producto creado exitosamente");
       } else {
         await api.updateItem(editId, payload);
+        alert("Producto actualizado exitosamente");
       }
       closeModal();
       load();
@@ -142,14 +214,47 @@ export default function Inventario() {
 
   const onDelete = async (row, ev) => {
     ev?.stopPropagation?.();
-    if (!window.confirm(`¿Eliminar "${row.nombreproducto}"?`)) return;
+    if (!window.confirm(`¿Está seguro de eliminar "${row.nombreproducto}"?\n\nEsta acción eliminará el producto y todo su inventario.`)) return;
     try {
-      await api.deleteItem(row.stockitemid);
-      load();
+      const response = await api.deleteItem(row.stockitemid);
+      if (response.ok) {
+        alert("Producto eliminado exitosamente");
+        load();
+      } else {
+        alert(response.error || "No se pudo eliminar el producto.");
+      }
     } catch (e) {
       console.error(e);
-      alert(e.message || "No se pudo eliminar (verifique si tiene ventas/compras o stock).");
+      
+      // Mostrar mensaje de error detallado
+      let errorMsg = "No se pudo eliminar el producto.";
+      
+      if (e.message) {
+        errorMsg = e.message;
+      }
+      
+      // Si hay detalles adicionales (facturas y órdenes de compra)
+      if (e.details) {
+        errorMsg += `\n\nDetalles:\n`;
+        if (e.details.invoiceCount > 0) {
+          errorMsg += `- Facturas de venta: ${e.details.invoiceCount}\n`;
+        }
+        if (e.details.purchaseOrderCount > 0) {
+          errorMsg += `- Órdenes de compra: ${e.details.purchaseOrderCount}`;
+        }
+      }
+      
+      alert(errorMsg);
     }
+  };
+
+  const handleStockGroupChange = (groupId) => {
+    setForm((f) => {
+      const newGroups = f.StockGroupIDs.includes(groupId)
+        ? f.StockGroupIDs.filter(id => id !== groupId)
+        : [...f.StockGroupIDs, groupId];
+      return { ...f, StockGroupIDs: newGroups };
+    });
   };
 
   return (
@@ -252,7 +357,7 @@ export default function Inventario() {
       {/* Modal Crear/Editar */}
       {showModal && (
         <div className="modal-mask" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 900 }}>
             <div className="modal-head">
               <h3 style={{ margin: 0 }}>
                 {mode === "new" ? "Nuevo producto" : `Editar producto #${editId}`}
@@ -260,100 +365,228 @@ export default function Inventario() {
               <button className="btn close" onClick={closeModal}>Cerrar</button>
             </div>
 
-            <div className="modal-body">
+            <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
               <div className="grid2">
+                {/* Información básica */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <h4 style={{ marginTop: 0 }}>Información Básica</h4>
+                </div>
+
                 <div>
-                  <label>Nombre</label>
+                  <label>Nombre del Producto *</label>
                   <input
-                    value={form.StockItemName}
-                    onChange={(e) => setForm((f) => ({ ...f, StockItemName: e.target.value }))}
+                    value={form.NombreProducto}
+                    onChange={(e) => setForm((f) => ({ ...f, NombreProducto: e.target.value }))}
                   />
                 </div>
 
                 <div>
-                  <label>SupplierID</label>
-                  <input
-                    type="number"
+                  <label>Proveedor *</label>
+                  <select
                     value={form.SupplierID}
                     onChange={(e) => setForm((f) => ({ ...f, SupplierID: e.target.value }))}
+                  >
+                    <option value="">Seleccione un proveedor</option>
+                    {suppliers.map((s) => (
+                      <option key={s.SupplierID} value={s.SupplierID}>
+                        {s.SupplierName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label>Marca</label>
+                  <input
+                    value={form.Marca}
+                    onChange={(e) => setForm((f) => ({ ...f, Marca: e.target.value }))}
                   />
                 </div>
 
                 <div>
-                  <label>UnitPackageID</label>
+                  <label>Talla/Tamaño</label>
                   <input
-                    type="number"
+                    value={form.Talla}
+                    onChange={(e) => setForm((f) => ({ ...f, Talla: e.target.value }))}
+                  />
+                </div>
+
+                <div>
+                  <label>Color</label>
+                  <select
+                    value={form.ColorID}
+                    onChange={(e) => setForm((f) => ({ ...f, ColorID: e.target.value }))}
+                  >
+                    <option value="">Seleccione un color (opcional)</option>
+                    {colors.map((c) => (
+                      <option key={c.ColorID} value={c.ColorID}>
+                        {c.ColorName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label>Código de Barras</label>
+                  <input
+                    value={form.CodigoBarras}
+                    onChange={(e) => setForm((f) => ({ ...f, CodigoBarras: e.target.value }))}
+                  />
+                </div>
+
+                {/* Empaquetamiento */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <h4>Empaquetamiento</h4>
+                </div>
+
+                <div>
+                  <label>Empaque Unitario *</label>
+                  <select
                     value={form.UnitPackageID}
                     onChange={(e) => setForm((f) => ({ ...f, UnitPackageID: e.target.value }))}
-                  />
+                  >
+                    <option value="">Seleccione un tipo</option>
+                    {packageTypes.map((p) => (
+                      <option key={p.PackageTypeID} value={p.PackageTypeID}>
+                        {p.PackageTypeName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
-                  <label>OuterPackageID</label>
-                  <input
-                    type="number"
+                  <label>Empaque Externo *</label>
+                  <select
                     value={form.OuterPackageID}
                     onChange={(e) => setForm((f) => ({ ...f, OuterPackageID: e.target.value }))}
-                  />
+                  >
+                    <option value="">Seleccione un tipo</option>
+                    {packageTypes.map((p) => (
+                      <option key={p.PackageTypeID} value={p.PackageTypeID}>
+                        {p.PackageTypeName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
-                  <label>QuantityPerOuter</label>
+                  <label>Cantidad por Empaque *</label>
                   <input
                     type="number"
-                    value={form.QuantityPerOuter}
-                    onChange={(e) => setForm((f) => ({ ...f, QuantityPerOuter: e.target.value }))}
+                    value={form.CantidadEmpaquetamiento}
+                    onChange={(e) => setForm((f) => ({ ...f, CantidadEmpaquetamiento: e.target.value }))}
                   />
                 </div>
 
                 <div>
-                  <label>UnitPrice</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.UnitPrice}
-                    onChange={(e) => setForm((f) => ({ ...f, UnitPrice: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label>RecommendedRetailPrice</label>
+                  <label>Peso (kg)</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={form.RecommendedRetailPrice}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, RecommendedRetailPrice: e.target.value }))
-                    }
+                    value={form.Peso}
+                    onChange={(e) => setForm((f) => ({ ...f, Peso: e.target.value }))}
+                  />
+                </div>
+
+                {/* Precios */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <h4>Precios e Impuestos</h4>
+                </div>
+
+                <div>
+                  <label>Precio Unitario *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.PrecioUnitario}
+                    onChange={(e) => setForm((f) => ({ ...f, PrecioUnitario: e.target.value }))}
                   />
                 </div>
 
                 <div>
-                  <label>TaxRate</label>
+                  <label>Precio de Venta *</label>
                   <input
                     type="number"
-                    step="0.001"
-                    value={form.TaxRate}
-                    onChange={(e) => setForm((f) => ({ ...f, TaxRate: e.target.value }))}
+                    step="0.01"
+                    value={form.PrecioVenta}
+                    onChange={(e) => setForm((f) => ({ ...f, PrecioVenta: e.target.value }))}
                   />
                 </div>
 
                 <div>
-                  <label>TypicalWeightPerUnit</label>
+                  <label>Impuesto (%) *</label>
                   <input
                     type="number"
-                    step="0.001"
-                    value={form.TypicalWeightPerUnit}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, TypicalWeightPerUnit: e.target.value }))
-                    }
+                    step="0.01"
+                    value={form.Impuesto}
+                    onChange={(e) => setForm((f) => ({ ...f, Impuesto: e.target.value }))}
                   />
+                </div>
+
+                {/* Inventario */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <h4>Inventario</h4>
+                </div>
+
+                <div>
+                  <label>Cantidad Disponible</label>
+                  <input
+                    type="number"
+                    value={form.CantidadDisponible}
+                    onChange={(e) => setForm((f) => ({ ...f, CantidadDisponible: e.target.value }))}
+                  />
+                </div>
+
+                <div>
+                  <label>Ubicación</label>
+                  <input
+                    value={form.Ubicacion}
+                    onChange={(e) => setForm((f) => ({ ...f, Ubicacion: e.target.value }))}
+                    placeholder="Ej: A-01-B"
+                  />
+                </div>
+
+                <div>
+                  <label>Tiempo de Entrega (días)</label>
+                  <input
+                    type="number"
+                    value={form.TiempoEntrega}
+                    onChange={(e) => setForm((f) => ({ ...f, TiempoEntrega: e.target.value }))}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={form.RequiereFrio}
+                      onChange={(e) => setForm((f) => ({ ...f, RequiereFrio: e.target.checked }))}
+                    />
+                    Requiere Refrigeración
+                  </label>
+                </div>
+
+                {/* Grupos de Stock */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <h4>Grupos de Productos</h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {stockGroups.map((group) => (
+                      <label key={group.StockGroupID} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <input
+                          type="checkbox"
+                          checked={form.StockGroupIDs.includes(group.StockGroupID)}
+                          onChange={() => handleStockGroupChange(group.StockGroupID)}
+                        />
+                        {group.StockGroupName}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 20, borderTop: '1px solid #ddd' }}>
                 <button className="btn primary" onClick={onSave} disabled={saving}>
-                  {saving ? "Guardando..." : mode === "new" ? "Crear" : "Actualizar"}
+                  {saving ? "Guardando..." : mode === "new" ? "Crear Producto" : "Actualizar Producto"}
                 </button>
                 <button className="btn ghost" onClick={closeModal} disabled={saving}>
                   Cancelar

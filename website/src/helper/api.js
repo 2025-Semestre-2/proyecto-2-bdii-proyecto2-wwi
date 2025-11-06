@@ -27,6 +27,17 @@ export const api = {
   // Inventario
   getInventario: (search, group) => http(`/inventario${qs({ search, group })}`),
   getItem:       (id)            => http(`/inventario/${id}`),
+  
+  // Inventario - Referencias para formularios
+  getSuppliers:     ()   => http(`/inventario/reference/suppliers`),
+  getColors:        ()   => http(`/inventario/reference/colors`),
+  getPackageTypes:  ()   => http(`/inventario/reference/packages`),
+  getStockGroups:   ()   => http(`/inventario/reference/stockgroups`),
+  getProductStockGroups: (id) => http(`/inventario/reference/stockgroups/${id}`),
+  
+  // Verificar si un producto puede ser eliminado
+  checkProductCanDelete: (id) => http(`/inventario/check/${id}`),
+  
   createItem: (payload) =>
     fetch(`${BASE}/inventario`, {
       method: 'POST',
@@ -44,7 +55,15 @@ export const api = {
   deleteItem: (id) =>
     fetch(`${BASE}/inventario/${id}`, {
       method: 'DELETE'
-    }).then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
+    }).then(async r => { 
+      const data = await r.json();
+      if(!r.ok) {
+        const error = new Error(data.error || `HTTP ${r.status}`);
+        error.details = data.details;
+        throw error;
+      }
+      return data;
+    }),
 
   getVentas: ({ client, from, to, min, max, page = 1, limit = 50 } = {}) => {
     const p = new URLSearchParams();

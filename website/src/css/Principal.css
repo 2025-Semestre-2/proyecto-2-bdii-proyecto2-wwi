@@ -8,19 +8,17 @@
 html, body, #root {
   height: 100%;
   width: 100%;
-  overflow: hidden;
 }
 
 .carreras-destacadas {
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
   background: linear-gradient(135deg, #0f0d0a 0%, #1a1410 50%, #211a15 100%);
   padding: 40px 20px;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow-x: hidden;
-  overflow-y: auto;
   position: relative;
 }
 

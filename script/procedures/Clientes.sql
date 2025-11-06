@@ -1,4 +1,4 @@
-use wideworldimporters;
+use WideWorldImporters;
 go
 create or alter procedure sp_obtenerClientes
   @search nvarchar(100) = null
