@@ -7,6 +7,7 @@
 
 USE BD_Corporativo;
 GO
+
 PRINT '=================================================';
 PRINT 'CREANDO SISTEMA DE USUARIOS';
 PRINT '=================================================';
