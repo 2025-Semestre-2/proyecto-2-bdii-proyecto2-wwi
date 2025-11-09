@@ -1,7 +1,14 @@
-use master;
-
+USE master;
 GO
-drop database if exists WWI_Limon;
+-- Poner la base de datos en modo SINGLE_USER para desconectar a todos
+ALTER DATABASE WWI_Limon SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+GO
+-- Ahora sí eliminar el distribuidor
+EXEC sp_dropdistributor @no_checks = 1;
+GO
+
+-- Eliminar la base de datos
+DROP DATABASE IF EXISTS WWI_Limon;
 GO
 
 IF DB_ID('WWI_Limon') IS NULL

@@ -1,7 +1,10 @@
-use master;
-
+USE master;
 GO
-drop database if exists WWI_SanJose;
+ALTER DATABASE WWI_SanJose SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+GO
+EXEC sp_dropdistributor @no_checks = 1;
+GO
+DROP DATABASE IF EXISTS WWI_SanJose;
 GO
 
 IF DB_ID('WWI_SanJose') IS NULL

@@ -1,7 +1,8 @@
-use master;
-
+USE master;
 GO
-drop database if exists WWI_Corporativo;
+ALTER DATABASE WWI_Corporativo SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+GO
+DROP DATABASE IF EXISTS WWI_Corporativo;
 GO
 
 IF DB_ID('WWI_Corporativo') IS NULL
@@ -88,18 +89,358 @@ CREATE TABLE Sales.CustomerSensitiveData (
 );
 GO
 
+-- ============================================================
+-- CREAR ESQUEMAS ADICIONALES PARA REPLICACIÓN
+-- ============================================================
+
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'Purchasing')
+    EXEC('CREATE SCHEMA Purchasing');
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'Warehouse')
+    EXEC('CREATE SCHEMA Warehouse');
+GO
+
+-- ============================================================
+-- TABLAS REPLICADAS PARA ESTADÍSTICAS CONSOLIDADAS
+-- ============================================================
+
+-- Tabla de categorías de clientes (réplica)
+CREATE TABLE Sales.CustomerCategories (
+    CustomerCategoryID INT PRIMARY KEY,
+    CustomerCategoryName NVARCHAR(50) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1
+);
+GO
+
+-- Tabla de grupos de compra (réplica)
+CREATE TABLE Sales.BuyingGroups (
+    BuyingGroupID INT PRIMARY KEY,
+    BuyingGroupName NVARCHAR(50) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1
+);
+GO
+
+-- Tabla de personas (réplica simplificada)
+CREATE TABLE Application.People (
+    PersonID INT PRIMARY KEY,
+    FullName NVARCHAR(50) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1
+);
+GO
+
+-- Tabla de métodos de entrega (réplica)
+CREATE TABLE Application.DeliveryMethods (
+    DeliveryMethodID INT PRIMARY KEY,
+    DeliveryMethodName NVARCHAR(50) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1
+);
+GO
+
+-- ============================================================
+-- PRIMERO: TABLAS DE WAREHOUSE (sin FK a otras tablas complejas)
+-- ============================================================
+
+-- Tabla de grupos de stock (réplica)
+CREATE TABLE Warehouse.StockGroups (
+    StockGroupID INT PRIMARY KEY,
+    StockGroupName NVARCHAR(50) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1
+);
+GO
+
+-- Tabla de colores (réplica)
+CREATE TABLE Warehouse.Colors (
+    ColorID INT PRIMARY KEY,
+    ColorName NVARCHAR(20) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1
+);
+GO
+
+-- Tabla de tipos de empaquetamiento (réplica)
+CREATE TABLE Warehouse.PackageTypes (
+    PackageTypeID INT PRIMARY KEY,
+    PackageTypeName NVARCHAR(50) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1
+);
+GO
+
+-- ============================================================
+-- SEGUNDO: TABLAS DE PURCHASING
+-- ============================================================
+
+-- Tabla de categorías de proveedores (réplica)
+CREATE TABLE Purchasing.SupplierCategories (
+    SupplierCategoryID INT PRIMARY KEY,
+    SupplierCategoryName NVARCHAR(50) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1
+);
+GO
+
+-- Tabla de proveedores consolidada (réplica completa)
+CREATE TABLE Purchasing.Suppliers (
+    SupplierID INT PRIMARY KEY,
+    SupplierName NVARCHAR(100) NOT NULL,
+    SupplierCategoryID INT NOT NULL,
+    SupplierReference NVARCHAR(20) NULL,
+    PrimaryContactPersonID INT NOT NULL,
+    AlternateContactPersonID INT NULL,
+    DeliveryMethodID INT NULL,
+    DeliveryCityID INT NOT NULL,
+    PaymentDays INT NOT NULL,
+    PhoneNumber NVARCHAR(20) NOT NULL,
+    FaxNumber NVARCHAR(20) NOT NULL,
+    WebsiteURL NVARCHAR(256) NOT NULL,
+    DeliveryAddressLine1 NVARCHAR(60) NOT NULL,
+    DeliveryAddressLine2 NVARCHAR(60) NULL,
+    DeliveryPostalCode NVARCHAR(10) NOT NULL,
+    DeliveryLocation GEOGRAPHY NULL,
+    BankAccountName NVARCHAR(50) NULL,
+    BankAccountBranch NVARCHAR(50) NULL,
+    BankAccountCode NVARCHAR(20) NULL,
+    BankAccountNumber NVARCHAR(20) NULL,
+    BankInternationalCode NVARCHAR(20) NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (SupplierCategoryID) REFERENCES Purchasing.SupplierCategories(SupplierCategoryID),
+    FOREIGN KEY (PrimaryContactPersonID) REFERENCES Application.People(PersonID),
+    FOREIGN KEY (AlternateContactPersonID) REFERENCES Application.People(PersonID),
+    FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
+    FOREIGN KEY (DeliveryCityID) REFERENCES Application.Cities(CityID)
+);
+GO
+
+-- ============================================================
+-- TERCERO: TABLA DE ITEMS (depende de Suppliers, Colors, PackageTypes)
+-- ============================================================
+
+-- Tabla de items de stock consolidada (réplica completa)
+CREATE TABLE Warehouse.StockItems (
+    StockItemID INT PRIMARY KEY,
+    StockItemName NVARCHAR(100) NOT NULL,
+    SupplierID INT NOT NULL,
+    ColorID INT NULL,
+    UnitPackageID INT NOT NULL,
+    OuterPackageID INT NOT NULL,
+    Brand NVARCHAR(50) NULL,
+    Size NVARCHAR(20) NULL,
+    LeadTimeDays INT NOT NULL,
+    QuantityPerOuter INT NOT NULL,
+    IsChillerStock BIT NOT NULL,
+    Barcode NVARCHAR(50) NULL,
+    TaxRate DECIMAL(18,3) NOT NULL,
+    UnitPrice DECIMAL(18,2) NOT NULL,
+    RecommendedRetailPrice DECIMAL(18,2) NULL,
+    TypicalWeightPerUnit DECIMAL(18,3) NOT NULL,
+    MarketingComments NVARCHAR(MAX) NULL,
+    InternalComments NVARCHAR(MAX) NULL,
+    Photo VARBINARY(MAX) NULL,
+    CustomFields NVARCHAR(MAX) NULL,
+    SearchDetails NVARCHAR(MAX) NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (SupplierID) REFERENCES Purchasing.Suppliers(SupplierID),
+    FOREIGN KEY (ColorID) REFERENCES Warehouse.Colors(ColorID),
+    FOREIGN KEY (UnitPackageID) REFERENCES Warehouse.PackageTypes(PackageTypeID),
+    FOREIGN KEY (OuterPackageID) REFERENCES Warehouse.PackageTypes(PackageTypeID)
+);
+GO
+
+-- ============================================================
+-- CUARTO: TABLAS QUE DEPENDEN DE STOCKITEMS
+-- ============================================================
+
+-- Tabla de relación entre items de stock y grupos (réplica)
+CREATE TABLE Warehouse.StockItemStockGroups (
+    StockItemStockGroupID INT PRIMARY KEY,
+    StockItemID INT NOT NULL,
+    StockGroupID INT NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID),
+    FOREIGN KEY (StockGroupID) REFERENCES Warehouse.StockGroups(StockGroupID)
+);
+GO
+
+-- Tabla de holdings de stock consolidada (réplica completa)
+CREATE TABLE Warehouse.StockItemHoldings (
+    StockItemID INT PRIMARY KEY,
+    QuantityOnHand INT NOT NULL,
+    BinLocation NVARCHAR(20) NOT NULL,
+    LastStocktakeQuantity INT NOT NULL,
+    LastCostPrice DECIMAL(18,2) NOT NULL,
+    ReorderLevel INT NOT NULL,
+    TargetStockLevel INT NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    LastEditedWhen DATETIME2 NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
+-- ============================================================
+-- QUINTO: TABLAS DE SALES
+-- ============================================================
+
+-- Tabla de clientes consolidada (réplica sin datos sensibles)
+CREATE TABLE Sales.Customers (
+    CustomerID INT PRIMARY KEY,
+    CustomerName NVARCHAR(100) NOT NULL,
+    CustomerCategoryID INT NOT NULL,
+    BuyingGroupID INT NULL,
+    BillToCustomerID INT NOT NULL,
+    PrimaryContactPersonID INT NOT NULL,
+    AlternateContactPersonID INT NULL,
+    DeliveryCityID INT NOT NULL,
+    DeliveryMethodID INT NULL,
+    PaymentDays INT NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (CustomerCategoryID) REFERENCES Sales.CustomerCategories(CustomerCategoryID),
+    FOREIGN KEY (BuyingGroupID) REFERENCES Sales.BuyingGroups(BuyingGroupID),
+    FOREIGN KEY (DeliveryCityID) REFERENCES Application.Cities(CityID),
+    FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
+    FOREIGN KEY (PrimaryContactPersonID) REFERENCES Application.People(PersonID),
+    FOREIGN KEY (AlternateContactPersonID) REFERENCES Application.People(PersonID)
+);
+GO
+
+-- Tabla de facturas consolidada (réplica completa)
+CREATE TABLE Sales.Invoices (
+    InvoiceID INT PRIMARY KEY,
+    CustomerID INT NOT NULL,
+    InvoiceDate DATE NOT NULL,
+    DeliveryMethodID INT NULL,
+    CustomerPurchaseOrderNumber NVARCHAR(20) NULL,
+    ContactPersonID INT NOT NULL,
+    SalespersonPersonID INT NOT NULL,
+    DeliveryInstructions NVARCHAR(MAX) NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (CustomerID) REFERENCES Sales.Customers(CustomerID),
+    FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
+    FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID),
+    FOREIGN KEY (SalespersonPersonID) REFERENCES Application.People(PersonID)
+);
+GO
+
+-- Tabla de líneas de facturas consolidada (réplica completa)
+CREATE TABLE Sales.InvoiceLines (
+    InvoiceLineID INT PRIMARY KEY,
+    InvoiceID INT NOT NULL,
+    StockItemID INT NOT NULL,
+    Description NVARCHAR(100) NOT NULL,
+    Quantity INT NOT NULL,
+    UnitPrice DECIMAL(18,2) NULL,
+    TaxRate DECIMAL(18,3) NOT NULL,
+    TaxAmount DECIMAL(18,2) NOT NULL,
+    LineProfit DECIMAL(18,2) NOT NULL,
+    ExtendedPrice DECIMAL(18,2) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (InvoiceID) REFERENCES Sales.Invoices(InvoiceID),
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
+-- ============================================================
+-- SEXTO: TABLAS DE PURCHASING QUE DEPENDEN DE STOCKITEMS
+-- ============================================================
+
+-- Tabla de órdenes de compra consolidada (réplica completa)
+CREATE TABLE Purchasing.PurchaseOrders (
+    PurchaseOrderID INT PRIMARY KEY,
+    SupplierID INT NOT NULL,
+    OrderDate DATE NOT NULL,
+    ExpectedDeliveryDate DATE NOT NULL,
+    DeliveryMethodID INT NULL,
+    ContactPersonID INT NOT NULL,
+    SupplierReference NVARCHAR(20) NULL,
+    IsOrderFinalized BIT NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (SupplierID) REFERENCES Purchasing.Suppliers(SupplierID),
+    FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
+    FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID)
+);
+GO
+
+-- Tabla de líneas de órdenes de compra consolidada (réplica completa)
+CREATE TABLE Purchasing.PurchaseOrderLines (
+    PurchaseOrderLineID INT PRIMARY KEY,
+    PurchaseOrderID INT NOT NULL,
+    StockItemID INT NOT NULL,
+    OrderedOuters INT NOT NULL,
+    Description NVARCHAR(100) NOT NULL,
+    ReceivedOuters INT NOT NULL,
+    ExpectedUnitPricePerOuter DECIMAL(18,2) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders(PurchaseOrderID),
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
+-- Tabla de relación entre items de stock y grupos (réplica)
+CREATE TABLE Warehouse.StockItemStockGroups (
+    StockItemStockGroupID INT PRIMARY KEY,
+    StockItemID INT NOT NULL,
+    StockGroupID INT NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID),
+    FOREIGN KEY (StockGroupID) REFERENCES Warehouse.StockGroups(StockGroupID)
+);
+GO
+
+-- Tabla de holdings de stock consolidada (réplica completa)
+CREATE TABLE Warehouse.StockItemHoldings (
+    StockItemID INT PRIMARY KEY,
+    QuantityOnHand INT NOT NULL,
+    BinLocation NVARCHAR(20) NOT NULL,
+    LastStocktakeQuantity INT NOT NULL,
+    LastCostPrice DECIMAL(18,2) NOT NULL,
+    ReorderLevel INT NOT NULL,
+    TargetStockLevel INT NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    LastEditedWhen DATETIME2 NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
+-- Tabla de transacciones de stock consolidada (réplica completa)
+CREATE TABLE Warehouse.StockItemTransactions (
+    StockItemTransactionID INT PRIMARY KEY,
+    StockItemID INT NOT NULL,
+    TransactionTypeID INT NOT NULL,
+    CustomerID INT NULL,
+    InvoiceID INT NULL,
+    SupplierID INT NULL,
+    PurchaseOrderID INT NULL,
+    TransactionOccurredWhen DATETIME2 NOT NULL,
+    Quantity DECIMAL(18,3) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    LastEditedWhen DATETIME2 NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
 PRINT 'Estructura de base de datos WWI_Corporativo creada exitosamente.';
 PRINT '';
 PRINT 'ESQUEMAS CREADOS:';
 PRINT '  - Application: Tablas auxiliares (Countries, StateProvinces, Cities)';
-PRINT '  - Sales: SOLO datos sensibles de clientes';
+PRINT '  - Sales: Datos sensibles de clientes + Réplicas para estadísticas';
+PRINT '  - Purchasing: Réplicas de proveedores y órdenes de compra';
+PRINT '  - Warehouse: Réplicas de productos e inventario';
 PRINT '';
 PRINT 'PROPOSITO:';
-PRINT '  Base de datos centralizada para almacenar UNICAMENTE datos sensibles';
-PRINT '  de clientes (contacto, direcciones, ubicacion geografica).';
-PRINT '  Los datos no sensibles permanecen en las sucursales (SanJose, Limon).';
+PRINT '  1. Almacenar datos sensibles de clientes (Sales.CustomerSensitiveData)';
+PRINT '  2. Consolidar réplicas de sucursales para estadísticas centralizadas';
 PRINT '';
-PRINT 'TABLA PRINCIPAL:';
-PRINT '  - Sales.CustomerSensitiveData: PhoneNumber, FaxNumber, WebsiteURL,';
-PRINT '    DeliveryAddressLine1/2, DeliveryPostalCode, DeliveryLocation';
+PRINT 'COLUMNA CLAVE: SucursalOrigen';
+PRINT '  Identifica el origen de cada registro: ''SanJose'' o ''Limon''';
+PRINT '';
+PRINT 'TABLAS PARA ESTADÍSTICAS:';
+PRINT '  - Sales: Customers, Invoices, InvoiceLines';
+PRINT '  - Purchasing: Suppliers, PurchaseOrders, PurchaseOrderLines';
+PRINT '  - Warehouse: StockItems, StockItemHoldings, StockGroups, StockItemStockGroups';
 GO
+
