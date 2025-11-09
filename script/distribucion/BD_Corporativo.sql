@@ -262,7 +262,7 @@ GO
 
 -- Tabla de holdings de stock consolidada (réplica completa)
 CREATE TABLE Warehouse.StockItemHoldings (
-    StockItemID INT NOT NULL,
+    StockItemID INT PRIMARY KEY NOT NULL,
     SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     QuantityOnHand INT NOT NULL,
     BinLocation NVARCHAR(20) NOT NULL,
@@ -272,7 +272,6 @@ CREATE TABLE Warehouse.StockItemHoldings (
     TargetStockLevel INT NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
-    PRIMARY KEY (StockItemID, SucursalOrigen),
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
