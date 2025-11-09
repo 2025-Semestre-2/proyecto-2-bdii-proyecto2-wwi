@@ -144,6 +144,53 @@ PRINT '  - Tipos de empaquetamiento migrados: ' + CAST(@@ROWCOUNT AS NVARCHAR(10
 GO
 
 -- ============================================================
+-- 4. CATÁLOGOS COMPLETOS (Proveedores y Clientes)
+-- ============================================================
+-- Estos catálogos son IDÉNTICOS en todas las sucursales y corporativo
+-- NO se replican, solo se cargan una vez
+
+PRINT 'Migrando catálogos completos...';
+GO
+
+-- Proveedores (catálogo completo, SIN SucursalOrigen)
+INSERT INTO Purchasing.Suppliers 
+(
+    SupplierID, SupplierName, SupplierCategoryID, SupplierReference,
+    PrimaryContactPersonID, AlternateContactPersonID, DeliveryMethodID,
+    DeliveryCityID, PaymentDays, PhoneNumber, FaxNumber, WebsiteURL,
+    DeliveryAddressLine1, DeliveryAddressLine2, DeliveryPostalCode,
+    DeliveryLocation, BankAccountName, BankAccountBranch, BankAccountCode,
+    BankAccountNumber, BankInternationalCode, LastEditedBy
+)
+SELECT 
+    SupplierID, SupplierName, SupplierCategoryID, SupplierReference,
+    PrimaryContactPersonID, AlternateContactPersonID, DeliveryMethodID,
+    DeliveryCityID, PaymentDays, PhoneNumber, FaxNumber, WebsiteURL,
+    DeliveryAddressLine1, DeliveryAddressLine2, DeliveryPostalCode,
+    DeliveryLocation, BankAccountName, BankAccountBranch, BankAccountCode,
+    BankAccountNumber, BankInternationalCode, LastEditedBy
+FROM WideWorldImporters.Purchasing.Suppliers;
+
+PRINT '  - Proveedores migrados: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Clientes (catálogo sin datos sensibles, SIN SucursalOrigen)
+INSERT INTO Sales.Customers 
+(
+    CustomerID, CustomerName, CustomerCategoryID, BuyingGroupID,
+    BillToCustomerID, PrimaryContactPersonID, AlternateContactPersonID,
+    DeliveryCityID, DeliveryMethodID, PaymentDays, LastEditedBy
+)
+SELECT 
+    CustomerID, CustomerName, CustomerCategoryID, BuyingGroupID,
+    BillToCustomerID, PrimaryContactPersonID, AlternateContactPersonID,
+    DeliveryCityID, DeliveryMethodID, PaymentDays, LastEditedBy
+FROM WideWorldImporters.Sales.Customers;
+
+PRINT '  - Clientes migrados: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- ============================================================
 -- RESUMEN DE MIGRACIÓN
 -- ============================================================
 
@@ -155,10 +202,16 @@ PRINT '';
 PRINT 'Datos migrados:';
 PRINT '  ✓ Datos geográficos (Countries, StateProvinces, Cities)';
 PRINT '  ✓ Datos sensibles de clientes (CustomerSensitiveData)';
-PRINT '  ✓ Catálogos de referencia (para constraints)';
+PRINT '  ✓ Catálogos de referencia (Colors, StockGroups, PackageTypes, etc.)';
+PRINT '  ✓ Catálogos completos (Suppliers, Customers sin sensibles)';
 PRINT '';
-PRINT 'NOTA: Los datos operativos (Clientes, Productos, Ventas, etc.)';
+PRINT 'NOTA: Los datos operativos (Productos, Inventario, Ventas, Compras)';
 PRINT '      llegarán automáticamente por REPLICACIÓN SQL SERVER';
 PRINT '      desde las sucursales SanJose y Limon.';
+PRINT '';
+PRINT 'ARQUITECTURA:';
+PRINT '  • Catálogos estáticos: Cargados IDÉNTICOS (sin SucursalOrigen)';
+PRINT '  • Productos (StockItems): Replicados con SucursalOrigen';
+PRINT '  • Datos operativos: Replicados con SucursalOrigen';
 PRINT '';
 GO

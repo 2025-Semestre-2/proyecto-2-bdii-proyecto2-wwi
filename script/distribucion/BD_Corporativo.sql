@@ -200,7 +200,6 @@ CREATE TABLE Purchasing.Suppliers (
     BankAccountCode NVARCHAR(20) NULL,
     BankAccountNumber NVARCHAR(20) NULL,
     BankInternationalCode NVARCHAR(20) NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     LastEditedBy INT NOT NULL DEFAULT 1,
     FOREIGN KEY (SupplierCategoryID) REFERENCES Purchasing.SupplierCategories(SupplierCategoryID),
     FOREIGN KEY (PrimaryContactPersonID) REFERENCES Application.People(PersonID),
@@ -263,13 +262,32 @@ GO
 
 -- Tabla de holdings de stock consolidada (réplica completa)
 CREATE TABLE Warehouse.StockItemHoldings (
-    StockItemID INT PRIMARY KEY,
+    StockItemID INT NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     QuantityOnHand INT NOT NULL,
     BinLocation NVARCHAR(20) NOT NULL,
     LastStocktakeQuantity INT NOT NULL,
     LastCostPrice DECIMAL(18,2) NOT NULL,
     ReorderLevel INT NOT NULL,
     TargetStockLevel INT NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    LastEditedWhen DATETIME2 NOT NULL,
+    PRIMARY KEY (StockItemID, SucursalOrigen),
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
+-- Tabla de transacciones de stock consolidada (réplica completa)
+CREATE TABLE Warehouse.StockItemTransactions (
+    StockItemTransactionID INT PRIMARY KEY,
+    StockItemID INT NOT NULL,
+    TransactionTypeID INT NOT NULL,
+    CustomerID INT NULL,
+    InvoiceID INT NULL,
+    SupplierID INT NULL,
+    PurchaseOrderID INT NULL,
+    TransactionOccurredWhen DATETIME2 NOT NULL,
+    Quantity DECIMAL(18,3) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
     SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
@@ -293,7 +311,6 @@ CREATE TABLE Sales.Customers (
     DeliveryCityID INT NOT NULL,
     DeliveryMethodID INT NULL,
     PaymentDays INT NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     LastEditedBy INT NOT NULL DEFAULT 1,
     FOREIGN KEY (CustomerCategoryID) REFERENCES Sales.CustomerCategories(CustomerCategoryID),
     FOREIGN KEY (BuyingGroupID) REFERENCES Sales.BuyingGroups(BuyingGroupID),
@@ -374,51 +391,6 @@ CREATE TABLE Purchasing.PurchaseOrderLines (
     ExpectedUnitPricePerOuter DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders(PurchaseOrderID),
-    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
-);
-GO
-
--- Tabla de relación entre items de stock y grupos (réplica)
-CREATE TABLE Warehouse.StockItemStockGroups (
-    StockItemStockGroupID INT PRIMARY KEY,
-    StockItemID INT NOT NULL,
-    StockGroupID INT NOT NULL,
-    LastEditedBy INT NOT NULL DEFAULT 1,
-    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID),
-    FOREIGN KEY (StockGroupID) REFERENCES Warehouse.StockGroups(StockGroupID)
-);
-GO
-
--- Tabla de holdings de stock consolidada (réplica completa)
-CREATE TABLE Warehouse.StockItemHoldings (
-    StockItemID INT PRIMARY KEY,
-    QuantityOnHand INT NOT NULL,
-    BinLocation NVARCHAR(20) NOT NULL,
-    LastStocktakeQuantity INT NOT NULL,
-    LastCostPrice DECIMAL(18,2) NOT NULL,
-    ReorderLevel INT NOT NULL,
-    TargetStockLevel INT NOT NULL,
-    LastEditedBy INT NOT NULL DEFAULT 1,
-    LastEditedWhen DATETIME2 NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
-    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
-);
-GO
-
--- Tabla de transacciones de stock consolidada (réplica completa)
-CREATE TABLE Warehouse.StockItemTransactions (
-    StockItemTransactionID INT PRIMARY KEY,
-    StockItemID INT NOT NULL,
-    TransactionTypeID INT NOT NULL,
-    CustomerID INT NULL,
-    InvoiceID INT NULL,
-    SupplierID INT NULL,
-    PurchaseOrderID INT NULL,
-    TransactionOccurredWhen DATETIME2 NOT NULL,
-    Quantity DECIMAL(18,3) NOT NULL,
-    LastEditedBy INT NOT NULL DEFAULT 1,
-    LastEditedWhen DATETIME2 NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO

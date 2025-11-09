@@ -352,6 +352,7 @@ CREATE TABLE Purchasing.PurchaseOrderLines (
     OrderedOuters INT NOT NULL,
     Description NVARCHAR(100) NOT NULL,
     ReceivedOuters INT NOT NULL,
+    ExpectedUnitPricePerOuter DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID),
     FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders(PurchaseOrderID)

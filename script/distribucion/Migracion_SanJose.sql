@@ -284,11 +284,11 @@ SET IDENTITY_INSERT Purchasing.PurchaseOrderLines ON;
 INSERT INTO Purchasing.PurchaseOrderLines
 (
     PurchaseOrderLineID, PurchaseOrderID, StockItemID, OrderedOuters,
-    Description, ReceivedOuters, LastEditedBy
+    Description, ReceivedOuters, ExpectedUnitPricePerOuter, LastEditedBy
 )
 SELECT 
     pol.PurchaseOrderLineID, pol.PurchaseOrderID, pol.StockItemID, pol.OrderedOuters,
-    pol.Description, pol.ReceivedOuters, pol.LastEditedBy
+    pol.Description, pol.ReceivedOuters, pol.ExpectedUnitPricePerOuter, pol.LastEditedBy
 FROM WideWorldImporters.Purchasing.PurchaseOrderLines pol
 INNER JOIN WideWorldImporters.Purchasing.PurchaseOrders po ON po.PurchaseOrderID = pol.PurchaseOrderID
 WHERE po.PurchaseOrderID % 2 = 1; -- Solo líneas de órdenes que ya migramos
