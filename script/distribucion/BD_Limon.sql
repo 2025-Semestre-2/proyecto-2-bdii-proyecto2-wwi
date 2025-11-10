@@ -4,7 +4,7 @@ GO
 ALTER DATABASE WWI_Limon SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 GO
 -- Ahora sí eliminar el distribuidor
-EXEC sp_dropdistributor @no_checks = 1;
+EXEC sp_dropdistributor @no_checks = 1, @ignore_distributor = 1;
 GO
 
 -- Eliminar la base de datos

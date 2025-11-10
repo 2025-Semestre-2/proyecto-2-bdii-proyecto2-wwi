@@ -1,19 +1,32 @@
 USE master;
 GO
-ALTER DATABASE WWI_Corporativo SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-GO
-DROP DATABASE IF EXISTS WWI_Corporativo;
+
+-- Limpiar replicación si existe
+IF EXISTS (SELECT 1 FROM sys.databases WHERE name = 'WWI_Corporativo')
+BEGIN
+    EXEC sp_removedbreplication 'WWI_Corporativo';
+END
 GO
 
-IF DB_ID('WWI_Corporativo') IS NULL
+-- Eliminar distribuidor si existe
+IF EXISTS (SELECT 1 FROM sys.databases WHERE name = 'distribution')
 BEGIN
-    CREATE DATABASE WWI_Corporativo;
-    PRINT 'Database WWI_Corporativo created.';
+    EXEC sp_dropdistributor @no_checks = 1, @ignore_distributor = 1;
 END
-ELSE
+GO
+
+-- Eliminar base de datos
+IF EXISTS (SELECT 1 FROM sys.databases WHERE name = 'WWI_Corporativo')
 BEGIN
-    PRINT 'Database WWI_Corporativo already exists.';
+    ALTER DATABASE WWI_Corporativo SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE WWI_Corporativo;
+    PRINT 'Database WWI_Corporativo dropped.';
 END
+GO
+
+-- Crear base de datos
+CREATE DATABASE WWI_Corporativo;
+PRINT 'Database WWI_Corporativo created.';
 GO
 
 use WWI_Corporativo;
@@ -215,7 +228,7 @@ GO
 
 -- Tabla de items de stock consolidada (réplica completa)
 CREATE TABLE Warehouse.StockItems (
-    StockItemID INT PRIMARY KEY,
+    StockItemID INT PRIMARY KEY IDENTITY(1,1),
     StockItemName NVARCHAR(100) NOT NULL,
     SupplierID INT NOT NULL,
     ColorID INT NULL,
@@ -236,7 +249,6 @@ CREATE TABLE Warehouse.StockItems (
     Photo VARBINARY(MAX) NULL,
     CustomFields NVARCHAR(MAX) NULL,
     SearchDetails NVARCHAR(MAX) NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     LastEditedBy INT NOT NULL DEFAULT 1,
     FOREIGN KEY (SupplierID) REFERENCES Purchasing.Suppliers(SupplierID),
     FOREIGN KEY (ColorID) REFERENCES Warehouse.Colors(ColorID),
@@ -251,7 +263,7 @@ GO
 
 -- Tabla de relación entre items de stock y grupos (réplica)
 CREATE TABLE Warehouse.StockItemStockGroups (
-    StockItemStockGroupID INT PRIMARY KEY,
+    StockItemStockGroupID INT PRIMARY KEY IDENTITY(1,1),
     StockItemID INT NOT NULL,
     StockGroupID INT NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
@@ -262,7 +274,7 @@ GO
 
 -- Tabla de holdings de stock consolidada (réplica completa)
 CREATE TABLE Warehouse.StockItemHoldings (
-    StockItemID INT PRIMARY KEY NOT NULL,
+    StockItemID INT NOT NULL,
     SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     QuantityOnHand INT NOT NULL,
     BinLocation NVARCHAR(20) NOT NULL,
@@ -272,13 +284,15 @@ CREATE TABLE Warehouse.StockItemHoldings (
     TargetStockLevel INT NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
+    PRIMARY KEY (StockItemID, SucursalOrigen), -- PK compuesta para consolidar sucursales
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
 
 -- Tabla de transacciones de stock consolidada (réplica completa)
 CREATE TABLE Warehouse.StockItemTransactions (
-    StockItemTransactionID INT PRIMARY KEY,
+    StockItemTransactionID INT NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     StockItemID INT NOT NULL,
     TransactionTypeID INT NOT NULL,
     CustomerID INT NULL,
@@ -289,7 +303,7 @@ CREATE TABLE Warehouse.StockItemTransactions (
     Quantity DECIMAL(18,3) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+    PRIMARY KEY (StockItemTransactionID, SucursalOrigen), -- PK compuesta para consolidar sucursales
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
@@ -322,7 +336,8 @@ GO
 
 -- Tabla de facturas consolidada (réplica completa)
 CREATE TABLE Sales.Invoices (
-    InvoiceID INT PRIMARY KEY,
+    InvoiceID INT NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     CustomerID INT NOT NULL,
     InvoiceDate DATE NOT NULL,
     DeliveryMethodID INT NULL,
@@ -330,8 +345,8 @@ CREATE TABLE Sales.Invoices (
     ContactPersonID INT NOT NULL,
     SalespersonPersonID INT NOT NULL,
     DeliveryInstructions NVARCHAR(MAX) NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     LastEditedBy INT NOT NULL DEFAULT 1,
+    PRIMARY KEY (InvoiceID, SucursalOrigen), -- PK compuesta para consolidar sucursales
     FOREIGN KEY (CustomerID) REFERENCES Sales.Customers(CustomerID),
     FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
     FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID),
@@ -341,7 +356,8 @@ GO
 
 -- Tabla de líneas de facturas consolidada (réplica completa)
 CREATE TABLE Sales.InvoiceLines (
-    InvoiceLineID INT PRIMARY KEY,
+    InvoiceLineID INT NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     InvoiceID INT NOT NULL,
     StockItemID INT NOT NULL,
     Description NVARCHAR(100) NOT NULL,
@@ -352,7 +368,8 @@ CREATE TABLE Sales.InvoiceLines (
     LineProfit DECIMAL(18,2) NOT NULL,
     ExtendedPrice DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    FOREIGN KEY (InvoiceID) REFERENCES Sales.Invoices(InvoiceID),
+    PRIMARY KEY (InvoiceLineID, SucursalOrigen), -- PK compuesta para consolidar sucursales
+    FOREIGN KEY (InvoiceID, SucursalOrigen) REFERENCES Sales.Invoices(InvoiceID, SucursalOrigen),
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
@@ -363,7 +380,8 @@ GO
 
 -- Tabla de órdenes de compra consolidada (réplica completa)
 CREATE TABLE Purchasing.PurchaseOrders (
-    PurchaseOrderID INT PRIMARY KEY,
+    PurchaseOrderID INT NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     SupplierID INT NOT NULL,
     OrderDate DATE NOT NULL,
     ExpectedDeliveryDate DATE NOT NULL,
@@ -371,8 +389,8 @@ CREATE TABLE Purchasing.PurchaseOrders (
     ContactPersonID INT NOT NULL,
     SupplierReference NVARCHAR(20) NULL,
     IsOrderFinalized BIT NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     LastEditedBy INT NOT NULL DEFAULT 1,
+    PRIMARY KEY (PurchaseOrderID, SucursalOrigen), -- PK compuesta para consolidar sucursales
     FOREIGN KEY (SupplierID) REFERENCES Purchasing.Suppliers(SupplierID),
     FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
     FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID)
@@ -381,7 +399,8 @@ GO
 
 -- Tabla de líneas de órdenes de compra consolidada (réplica completa)
 CREATE TABLE Purchasing.PurchaseOrderLines (
-    PurchaseOrderLineID INT PRIMARY KEY,
+    PurchaseOrderLineID INT NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
     PurchaseOrderID INT NOT NULL,
     StockItemID INT NOT NULL,
     OrderedOuters INT NOT NULL,
@@ -389,7 +408,8 @@ CREATE TABLE Purchasing.PurchaseOrderLines (
     ReceivedOuters INT NOT NULL,
     ExpectedUnitPricePerOuter DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders(PurchaseOrderID),
+    PRIMARY KEY (PurchaseOrderLineID, SucursalOrigen), -- PK compuesta para consolidar sucursales
+    FOREIGN KEY (PurchaseOrderID, SucursalOrigen) REFERENCES Purchasing.PurchaseOrders(PurchaseOrderID, SucursalOrigen),
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO

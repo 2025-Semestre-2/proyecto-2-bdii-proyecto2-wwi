@@ -1,8 +1,12 @@
 USE master;
 GO
+-- Eliminar replicación
+EXEC sp_removedbreplication 'WWI_SanJose';  -- o WWI_Corporativo, WWI_Limon
+GO
+
 ALTER DATABASE WWI_SanJose SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 GO
-EXEC sp_dropdistributor @no_checks = 1;
+EXEC sp_dropdistributor @no_checks = 1, @ignore_distributor = 1;
 GO
 DROP DATABASE IF EXISTS WWI_SanJose;
 GO
@@ -146,6 +150,7 @@ CREATE TABLE Sales.Invoices (
     SalespersonPersonID INT NOT NULL,
     DeliveryInstructions NVARCHAR(MAX) NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
+    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (CustomerID) REFERENCES Sales.Customers(CustomerID),
     FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
     FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID),
@@ -228,7 +233,7 @@ CREATE TABLE Purchasing.Suppliers (
 );
 GO
 
-create TABLE Purchasing.PurchaseOrders (
+CREATE TABLE Purchasing.PurchaseOrders (
     PurchaseOrderID INT PRIMARY KEY IDENTITY(1,1),
     SupplierID INT NOT NULL,
     OrderDate DATE NOT NULL,
@@ -238,10 +243,12 @@ create TABLE Purchasing.PurchaseOrders (
     SupplierReference NVARCHAR(20) NULL,
     IsOrderFinalized BIT NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
+    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (SupplierID) REFERENCES Purchasing.Suppliers(SupplierID),
     FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
     FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID)
 );
+GO
 
 -- ============================================================
 -- TABLAS DE WAREHOUSE (Inventario)
@@ -289,6 +296,7 @@ CREATE TABLE Warehouse.StockItemHoldings (
     TargetStockLevel INT NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
@@ -317,6 +325,7 @@ CREATE TABLE Warehouse.StockItemTransactions (
     Quantity DECIMAL(18,3) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
+    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
@@ -334,6 +343,7 @@ CREATE TABLE Sales.InvoiceLines (
     LineProfit DECIMAL(18,2) NOT NULL,
     ExtendedPrice DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
+    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (InvoiceID) REFERENCES Sales.Invoices(InvoiceID),
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
@@ -349,6 +359,7 @@ CREATE TABLE Purchasing.PurchaseOrderLines (
     ReceivedOuters INT NOT NULL,
     ExpectedUnitPricePerOuter DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
+    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID),
     FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders(PurchaseOrderID)
 );

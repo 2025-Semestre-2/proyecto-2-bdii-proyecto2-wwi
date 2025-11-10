@@ -144,15 +144,13 @@ PRINT '  - Tipos de empaquetamiento migrados: ' + CAST(@@ROWCOUNT AS NVARCHAR(10
 GO
 
 -- ============================================================
--- 4. CATÁLOGOS COMPLETOS (Proveedores y Clientes)
+-- 4. PROVEEDORES Y CLIENTES (deben ir ANTES de StockItems)
 -- ============================================================
--- Estos catálogos son IDÉNTICOS en todas las sucursales y corporativo
--- NO se replican, solo se cargan una vez
 
-PRINT 'Migrando catálogos completos...';
+PRINT 'Migrando proveedores y clientes...';
 GO
 
--- Proveedores (catálogo completo, SIN SucursalOrigen)
+-- Proveedores (catálogo completo, ANTES de StockItems)
 INSERT INTO Purchasing.Suppliers 
 (
     SupplierID, SupplierName, SupplierCategoryID, SupplierReference,
@@ -174,7 +172,7 @@ FROM WideWorldImporters.Purchasing.Suppliers;
 PRINT '  - Proveedores migrados: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
 GO
 
--- Clientes (catálogo sin datos sensibles, SIN SucursalOrigen)
+-- Clientes (catálogo sin datos sensibles)
 INSERT INTO Sales.Customers 
 (
     CustomerID, CustomerName, CustomerCategoryID, BuyingGroupID,
@@ -191,6 +189,47 @@ PRINT '  - Clientes migrados: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
 GO
 
 -- ============================================================
+-- 5. CATÁLOGO DE PRODUCTOS (Warehouse)
+-- ============================================================
+-- IMPORTANTE: Catálogo COMPLETO de productos debe estar en todas las bases
+-- antes de configurar Merge Replication
+
+PRINT 'Migrando catálogo de productos...';
+GO
+
+-- StockItems (catálogo completo)
+SET IDENTITY_INSERT Warehouse.StockItems ON;
+INSERT INTO Warehouse.StockItems
+(
+    StockItemID, StockItemName, SupplierID, ColorID, UnitPackageID,
+    OuterPackageID, Brand, Size, LeadTimeDays, QuantityPerOuter,
+    IsChillerStock, Barcode, TaxRate, UnitPrice, RecommendedRetailPrice,
+    TypicalWeightPerUnit, MarketingComments, InternalComments, Photo,
+    CustomFields, SearchDetails, LastEditedBy
+)
+SELECT 
+    StockItemID, StockItemName, SupplierID, ColorID, UnitPackageID,
+    OuterPackageID, Brand, Size, LeadTimeDays, QuantityPerOuter,
+    IsChillerStock, Barcode, TaxRate, UnitPrice, RecommendedRetailPrice,
+    TypicalWeightPerUnit, MarketingComments, InternalComments, Photo,
+    CustomFields, SearchDetails, LastEditedBy
+FROM WideWorldImporters.Warehouse.StockItems;
+SET IDENTITY_INSERT Warehouse.StockItems OFF;
+
+PRINT '  - Productos migrados: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- StockItemStockGroups (relaciones producto-grupo)
+SET IDENTITY_INSERT Warehouse.StockItemStockGroups ON;
+INSERT INTO Warehouse.StockItemStockGroups (StockItemStockGroupID, StockItemID, StockGroupID, LastEditedBy)
+SELECT StockItemStockGroupID, StockItemID, StockGroupID, LastEditedBy
+FROM WideWorldImporters.Warehouse.StockItemStockGroups;
+SET IDENTITY_INSERT Warehouse.StockItemStockGroups OFF;
+
+PRINT '  - Relaciones producto-grupo migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- ============================================================
 -- RESUMEN DE MIGRACIÓN
 -- ============================================================
 
@@ -203,15 +242,15 @@ PRINT 'Datos migrados:';
 PRINT '  ✓ Datos geográficos (Countries, StateProvinces, Cities)';
 PRINT '  ✓ Datos sensibles de clientes (CustomerSensitiveData)';
 PRINT '  ✓ Catálogos de referencia (Colors, StockGroups, PackageTypes, etc.)';
+PRINT '  ✓ Catálogo COMPLETO de productos (StockItems, StockItemStockGroups)';
 PRINT '  ✓ Catálogos completos (Suppliers, Customers sin sensibles)';
 PRINT '';
-PRINT 'NOTA: Los datos operativos (Productos, Inventario, Ventas, Compras)';
-PRINT '      llegarán automáticamente por REPLICACIÓN SQL SERVER';
-PRINT '      desde las sucursales SanJose y Limon.';
+PRINT 'NOTA: Catálogo de productos debe estar IDÉNTICO en las 3 bases';
+PRINT '      ANTES de configurar Merge Replication.';
 PRINT '';
 PRINT 'ARQUITECTURA:';
 PRINT '  • Catálogos estáticos: Cargados IDÉNTICOS (sin SucursalOrigen)';
-PRINT '  • Productos (StockItems): Replicados con SucursalOrigen';
-PRINT '  • Datos operativos: Replicados con SucursalOrigen';
+PRINT '  • Productos (StockItems): IDÉNTICOS inicialmente, cambios futuros se replican';
+PRINT '  • Datos operativos: Particionados por sucursal (NO se replican)';
 PRINT '';
 GO
