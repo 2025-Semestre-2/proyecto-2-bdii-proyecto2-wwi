@@ -140,7 +140,7 @@ CREATE TABLE Sales.Customers (
 GO
 
 -- Tabla de facturas (Invoices)
-CREATE TABLE Sales.Invoices (
+CREATE TABLE Sales.Invoices_Limon (
     InvoiceID INT PRIMARY KEY IDENTITY(1,1),
     CustomerID INT NOT NULL,
     InvoiceDate DATE NOT NULL,
@@ -232,7 +232,7 @@ CREATE TABLE Purchasing.Suppliers (
 );
 GO
 
-CREATE TABLE Purchasing.PurchaseOrders (
+CREATE TABLE Purchasing.PurchaseOrders_Limon (
     PurchaseOrderID INT PRIMARY KEY IDENTITY(1,1),
     SupplierID INT NOT NULL,
     OrderDate DATE NOT NULL,
@@ -284,7 +284,7 @@ CREATE TABLE Warehouse.StockItems (
 GO
 
 -- Tabla de holdings de stock (inventario disponible)
-CREATE TABLE Warehouse.StockItemHoldings (
+CREATE TABLE Warehouse.StockItemHoldings_Limon (
     StockItemID INT PRIMARY KEY,
     QuantityOnHand INT NOT NULL,
     BinLocation NVARCHAR(20) NOT NULL,
@@ -309,8 +309,8 @@ CREATE TABLE Warehouse.StockItemStockGroups (
 );
 GO
 
--- Tabla de transacciones de stock
-CREATE TABLE Warehouse.StockItemTransactions (
+-- Tabla de transacciones de stock (movimientos de inventario)
+CREATE TABLE Warehouse.StockItemTransactions_Limon (
     StockItemTransactionID INT PRIMARY KEY IDENTITY(1,1),
     StockItemID INT NOT NULL,
     TransactionTypeID INT NOT NULL,
@@ -327,7 +327,7 @@ CREATE TABLE Warehouse.StockItemTransactions (
 GO
 
 -- Tabla de líneas de facturas (detalle de ventas)
-CREATE TABLE Sales.InvoiceLines (
+CREATE TABLE Sales.InvoiceLines_Limon (
     InvoiceLineID INT PRIMARY KEY IDENTITY(1,1),
     InvoiceID INT NOT NULL,
     StockItemID INT NOT NULL,
@@ -339,13 +339,13 @@ CREATE TABLE Sales.InvoiceLines (
     LineProfit DECIMAL(18,2) NOT NULL,
     ExtendedPrice DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    FOREIGN KEY (InvoiceID) REFERENCES Sales.Invoices(InvoiceID),
+    FOREIGN KEY (InvoiceID) REFERENCES Sales.Invoices_Limon(InvoiceID),
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
 
--- Tabla de órdenes de compra (para relación con proveedores)
-CREATE TABLE Purchasing.PurchaseOrderLines (
+-- Tabla de líneas de órdenes de compra
+CREATE TABLE Purchasing.PurchaseOrderLines_Limon (
     PurchaseOrderLineID INT PRIMARY KEY IDENTITY(1,1),
     PurchaseOrderID INT NOT NULL,
     StockItemID INT NOT NULL,
@@ -355,7 +355,7 @@ CREATE TABLE Purchasing.PurchaseOrderLines (
     ExpectedUnitPricePerOuter DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID),
-    FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders(PurchaseOrderID)
+    FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders_Limon(PurchaseOrderID)
 );
 GO
 

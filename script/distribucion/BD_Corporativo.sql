@@ -272,10 +272,13 @@ CREATE TABLE Warehouse.StockItemStockGroups (
 );
 GO
 
--- Tabla de holdings de stock consolidada (réplica completa)
-CREATE TABLE Warehouse.StockItemHoldings (
-    StockItemID INT NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+-- ============================================================
+-- TABLAS DE WAREHOUSE - RÉPLICAS DE SUCURSALES
+-- ============================================================
+
+-- Tabla de holdings de SanJose (réplica exacta)
+CREATE TABLE Warehouse.StockItemHoldings_SJ (
+    StockItemID INT PRIMARY KEY,
     QuantityOnHand INT NOT NULL,
     BinLocation NVARCHAR(20) NOT NULL,
     LastStocktakeQuantity INT NOT NULL,
@@ -284,15 +287,28 @@ CREATE TABLE Warehouse.StockItemHoldings (
     TargetStockLevel INT NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
-    PRIMARY KEY (StockItemID, SucursalOrigen), -- PK compuesta para consolidar sucursales
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
 
--- Tabla de transacciones de stock consolidada (réplica completa)
-CREATE TABLE Warehouse.StockItemTransactions (
-    StockItemTransactionID INT NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+-- Tabla de holdings de Limon (réplica exacta)
+CREATE TABLE Warehouse.StockItemHoldings_Limon (
+    StockItemID INT PRIMARY KEY,
+    QuantityOnHand INT NOT NULL,
+    BinLocation NVARCHAR(20) NOT NULL,
+    LastStocktakeQuantity INT NOT NULL,
+    LastCostPrice DECIMAL(18,2) NOT NULL,
+    ReorderLevel INT NOT NULL,
+    TargetStockLevel INT NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    LastEditedWhen DATETIME2 NOT NULL,
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
+-- Tabla de transacciones de SanJose (réplica exacta)
+CREATE TABLE Warehouse.StockItemTransactions_SJ (
+    StockItemTransactionID INT PRIMARY KEY IDENTITY(1,1),
     StockItemID INT NOT NULL,
     TransactionTypeID INT NOT NULL,
     CustomerID INT NULL,
@@ -303,7 +319,23 @@ CREATE TABLE Warehouse.StockItemTransactions (
     Quantity DECIMAL(18,3) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
-    PRIMARY KEY (StockItemTransactionID, SucursalOrigen), -- PK compuesta para consolidar sucursales
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
+-- Tabla de transacciones de Limon (réplica exacta)
+CREATE TABLE Warehouse.StockItemTransactions_Limon (
+    StockItemTransactionID INT PRIMARY KEY IDENTITY(1,1),
+    StockItemID INT NOT NULL,
+    TransactionTypeID INT NOT NULL,
+    CustomerID INT NULL,
+    InvoiceID INT NULL,
+    SupplierID INT NULL,
+    PurchaseOrderID INT NULL,
+    TransactionOccurredWhen DATETIME2 NOT NULL,
+    Quantity DECIMAL(18,3) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    LastEditedWhen DATETIME2 NOT NULL,
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
@@ -334,10 +366,13 @@ CREATE TABLE Sales.Customers (
 );
 GO
 
--- Tabla de facturas consolidada (réplica completa)
-CREATE TABLE Sales.Invoices (
-    InvoiceID INT NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+-- ============================================================
+-- TABLAS DE SALES - RÉPLICAS DE SUCURSALES
+-- ============================================================
+
+-- Tabla de facturas de SanJose (réplica exacta)
+CREATE TABLE Sales.Invoices_SJ (
+    InvoiceID INT PRIMARY KEY IDENTITY(1,1),
     CustomerID INT NOT NULL,
     InvoiceDate DATE NOT NULL,
     DeliveryMethodID INT NULL,
@@ -346,7 +381,6 @@ CREATE TABLE Sales.Invoices (
     SalespersonPersonID INT NOT NULL,
     DeliveryInstructions NVARCHAR(MAX) NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    PRIMARY KEY (InvoiceID, SucursalOrigen), -- PK compuesta para consolidar sucursales
     FOREIGN KEY (CustomerID) REFERENCES Sales.Customers(CustomerID),
     FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
     FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID),
@@ -354,10 +388,27 @@ CREATE TABLE Sales.Invoices (
 );
 GO
 
--- Tabla de líneas de facturas consolidada (réplica completa)
-CREATE TABLE Sales.InvoiceLines (
-    InvoiceLineID INT NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+-- Tabla de facturas de Limon (réplica exacta)
+CREATE TABLE Sales.Invoices_Limon (
+    InvoiceID INT PRIMARY KEY IDENTITY(1,1),
+    CustomerID INT NOT NULL,
+    InvoiceDate DATE NOT NULL,
+    DeliveryMethodID INT NULL,
+    CustomerPurchaseOrderNumber NVARCHAR(20) NULL,
+    ContactPersonID INT NOT NULL,
+    SalespersonPersonID INT NOT NULL,
+    DeliveryInstructions NVARCHAR(MAX) NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (CustomerID) REFERENCES Sales.Customers(CustomerID),
+    FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
+    FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID),
+    FOREIGN KEY (SalespersonPersonID) REFERENCES Application.People(PersonID)
+);
+GO
+
+-- Tabla de líneas de facturas de SanJose (réplica exacta)
+CREATE TABLE Sales.InvoiceLines_SJ (
+    InvoiceLineID INT PRIMARY KEY IDENTITY(1,1),
     InvoiceID INT NOT NULL,
     StockItemID INT NOT NULL,
     Description NVARCHAR(100) NOT NULL,
@@ -368,8 +419,25 @@ CREATE TABLE Sales.InvoiceLines (
     LineProfit DECIMAL(18,2) NOT NULL,
     ExtendedPrice DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    PRIMARY KEY (InvoiceLineID, SucursalOrigen), -- PK compuesta para consolidar sucursales
-    FOREIGN KEY (InvoiceID, SucursalOrigen) REFERENCES Sales.Invoices(InvoiceID, SucursalOrigen),
+    FOREIGN KEY (InvoiceID) REFERENCES Sales.Invoices_SJ(InvoiceID),
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
+-- Tabla de líneas de facturas de Limon (réplica exacta)
+CREATE TABLE Sales.InvoiceLines_Limon (
+    InvoiceLineID INT PRIMARY KEY IDENTITY(1,1),
+    InvoiceID INT NOT NULL,
+    StockItemID INT NOT NULL,
+    Description NVARCHAR(100) NOT NULL,
+    Quantity INT NOT NULL,
+    UnitPrice DECIMAL(18,2) NULL,
+    TaxRate DECIMAL(18,3) NOT NULL,
+    TaxAmount DECIMAL(18,2) NOT NULL,
+    LineProfit DECIMAL(18,2) NOT NULL,
+    ExtendedPrice DECIMAL(18,2) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (InvoiceID) REFERENCES Sales.Invoices_Limon(InvoiceID),
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
@@ -378,10 +446,13 @@ GO
 -- SEXTO: TABLAS DE PURCHASING QUE DEPENDEN DE STOCKITEMS
 -- ============================================================
 
--- Tabla de órdenes de compra consolidada (réplica completa)
-CREATE TABLE Purchasing.PurchaseOrders (
-    PurchaseOrderID INT NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+-- ============================================================
+-- TABLAS DE PURCHASING - RÉPLICAS DE SUCURSALES
+-- ============================================================
+
+-- Tabla de órdenes de compra de SanJose (réplica exacta)
+CREATE TABLE Purchasing.PurchaseOrders_SJ (
+    PurchaseOrderID INT PRIMARY KEY IDENTITY(1,1),
     SupplierID INT NOT NULL,
     OrderDate DATE NOT NULL,
     ExpectedDeliveryDate DATE NOT NULL,
@@ -390,17 +461,32 @@ CREATE TABLE Purchasing.PurchaseOrders (
     SupplierReference NVARCHAR(20) NULL,
     IsOrderFinalized BIT NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    PRIMARY KEY (PurchaseOrderID, SucursalOrigen), -- PK compuesta para consolidar sucursales
     FOREIGN KEY (SupplierID) REFERENCES Purchasing.Suppliers(SupplierID),
     FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
     FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID)
 );
 GO
 
--- Tabla de líneas de órdenes de compra consolidada (réplica completa)
-CREATE TABLE Purchasing.PurchaseOrderLines (
-    PurchaseOrderLineID INT NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL, -- 'SanJose' o 'Limon'
+-- Tabla de órdenes de compra de Limon (réplica exacta)
+CREATE TABLE Purchasing.PurchaseOrders_Limon (
+    PurchaseOrderID INT PRIMARY KEY IDENTITY(1,1),
+    SupplierID INT NOT NULL,
+    OrderDate DATE NOT NULL,
+    ExpectedDeliveryDate DATE NOT NULL,
+    DeliveryMethodID INT NULL,
+    ContactPersonID INT NOT NULL,
+    SupplierReference NVARCHAR(20) NULL,
+    IsOrderFinalized BIT NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (SupplierID) REFERENCES Purchasing.Suppliers(SupplierID),
+    FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
+    FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID)
+);
+GO
+
+-- Tabla de líneas de órdenes de compra de SanJose (réplica exacta)
+CREATE TABLE Purchasing.PurchaseOrderLines_SJ (
+    PurchaseOrderLineID INT PRIMARY KEY IDENTITY(1,1),
     PurchaseOrderID INT NOT NULL,
     StockItemID INT NOT NULL,
     OrderedOuters INT NOT NULL,
@@ -408,8 +494,22 @@ CREATE TABLE Purchasing.PurchaseOrderLines (
     ReceivedOuters INT NOT NULL,
     ExpectedUnitPricePerOuter DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    PRIMARY KEY (PurchaseOrderLineID, SucursalOrigen), -- PK compuesta para consolidar sucursales
-    FOREIGN KEY (PurchaseOrderID, SucursalOrigen) REFERENCES Purchasing.PurchaseOrders(PurchaseOrderID, SucursalOrigen),
+    FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders_SJ(PurchaseOrderID),
+    FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
+);
+GO
+
+-- Tabla de líneas de órdenes de compra de Limon (réplica exacta)
+CREATE TABLE Purchasing.PurchaseOrderLines_Limon (
+    PurchaseOrderLineID INT PRIMARY KEY IDENTITY(1,1),
+    PurchaseOrderID INT NOT NULL,
+    StockItemID INT NOT NULL,
+    OrderedOuters INT NOT NULL,
+    Description NVARCHAR(100) NOT NULL,
+    ReceivedOuters INT NOT NULL,
+    ExpectedUnitPricePerOuter DECIMAL(18,2) NOT NULL,
+    LastEditedBy INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders_Limon(PurchaseOrderID),
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
@@ -417,21 +517,26 @@ GO
 PRINT 'Estructura de base de datos WWI_Corporativo creada exitosamente.';
 PRINT '';
 PRINT 'ESQUEMAS CREADOS:';
-PRINT '  - Application: Tablas auxiliares (Countries, StateProvinces, Cities)';
-PRINT '  - Sales: Datos sensibles de clientes + Réplicas para estadísticas';
-PRINT '  - Purchasing: Réplicas de proveedores y órdenes de compra';
-PRINT '  - Warehouse: Réplicas de productos e inventario';
+PRINT '  - Application: Tablas auxiliares (Countries, StateProvinces, Cities, People, DeliveryMethods)';
+PRINT '  - Sales: Datos sensibles de clientes + Réplicas de SJ y Limon';
+PRINT '  - Purchasing: Réplicas de proveedores y órdenes de SJ y Limon';
+PRINT '  - Warehouse: Réplicas de productos e inventario de SJ y Limon';
 PRINT '';
 PRINT 'PROPOSITO:';
 PRINT '  1. Almacenar datos sensibles de clientes (Sales.CustomerSensitiveData)';
-PRINT '  2. Consolidar réplicas de sucursales para estadísticas centralizadas';
+PRINT '  2. Consolidar réplicas de AMBAS sucursales para disaster recovery';
+PRINT '  3. Generar estadísticas consolidadas desde tablas separadas';
 PRINT '';
-PRINT 'COLUMNA CLAVE: SucursalOrigen';
-PRINT '  Identifica el origen de cada registro: ''SanJose'' o ''Limon''';
+PRINT 'TABLAS REPLICADAS (POR SUCURSAL):';
+PRINT '  - Warehouse: StockItemHoldings_SJ, StockItemHoldings_Limon';
+PRINT '  - Warehouse: StockItemTransactions_SJ, StockItemTransactions_Limon';
+PRINT '  - Sales: Invoices_SJ, Invoices_Limon, InvoiceLines_SJ, InvoiceLines_Limon';
+PRINT '  - Purchasing: PurchaseOrders_SJ, PurchaseOrders_Limon, PurchaseOrderLines_SJ, PurchaseOrderLines_Limon';
 PRINT '';
-PRINT 'TABLAS PARA ESTADÍSTICAS:';
-PRINT '  - Sales: Customers, Invoices, InvoiceLines';
-PRINT '  - Purchasing: Suppliers, PurchaseOrders, PurchaseOrderLines';
-PRINT '  - Warehouse: StockItems, StockItemHoldings, StockGroups, StockItemStockGroups';
+PRINT 'VENTAJAS:';
+PRINT '  ✓ Sin conflictos de IDs (tablas separadas por sucursal)';
+PRINT '  ✓ Replicación directa (nombre a nombre)';
+PRINT '  ✓ Disaster recovery completo (copia exacta de cada sucursal)';
+PRINT '  ✓ Estadísticas con UNION ALL entre tablas _SJ y _Limon';
 GO
 

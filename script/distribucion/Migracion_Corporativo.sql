@@ -2,9 +2,12 @@
 -- MIGRACIÓN DE DATOS A WWI_CORPORATIVO
 -- ============================================================
 -- Propósito: 
---   1. Migrar SOLO datos sensibles de clientes
---   2. Migrar catálogos de referencia (para constraints)
---   3. NO migrar datos operativos (llegarán por replicación)
+--   1. Migrar catálogos de referencia (idénticos en las 3 bases)
+--   2. Migrar SOLO datos sensibles de clientes
+--   3. Cargar datos iniciales en tablas _SJ y _Limon (mismo estado inicial para replicación)
+--
+-- NOTA: Este script carga EXACTAMENTE los mismos datos que Migracion_SanJose.sql
+--       y Migracion_Limon.sql, pero en CORPORATIVO (en sus respectivas tablas _SJ y _Limon)
 -- ============================================================
 
 USE WWI_Corporativo;
@@ -230,6 +233,238 @@ PRINT '  - Relaciones producto-grupo migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(1
 GO
 
 -- ============================================================
+-- 6. DATOS OPERATIVOS DE SANJOSE (Tablas _SJ)
+-- ============================================================
+
+PRINT '';
+PRINT 'Migrando datos operativos de SanJose a tablas _SJ...';
+GO
+
+-- Inventario de SanJose (50% - StockItemID impar)
+INSERT INTO Warehouse.StockItemHoldings_SJ
+(
+    StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity,
+    LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen
+)
+SELECT 
+    StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity,
+    LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen
+FROM WideWorldImporters.Warehouse.StockItemHoldings
+WHERE StockItemID % 2 = 1; -- Solo IDs impares
+
+PRINT '  - Inventario SanJose migrado: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Facturas de SanJose (50% - CustomerID impar)
+SET IDENTITY_INSERT Sales.Invoices_SJ ON;
+INSERT INTO Sales.Invoices_SJ
+(
+    InvoiceID, CustomerID, InvoiceDate, DeliveryMethodID,
+    CustomerPurchaseOrderNumber, ContactPersonID, SalespersonPersonID,
+    DeliveryInstructions, LastEditedBy
+)
+SELECT 
+    InvoiceID, CustomerID, InvoiceDate, DeliveryMethodID,
+    CustomerPurchaseOrderNumber, ContactPersonID, SalespersonPersonID,
+    DeliveryInstructions, LastEditedBy
+FROM WideWorldImporters.Sales.Invoices
+WHERE CustomerID % 2 = 1; -- Solo clientes con ID impar
+SET IDENTITY_INSERT Sales.Invoices_SJ OFF;
+
+PRINT '  - Facturas SanJose migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Líneas de facturas de SanJose
+SET IDENTITY_INSERT Sales.InvoiceLines_SJ ON;
+INSERT INTO Sales.InvoiceLines_SJ
+(
+    InvoiceLineID, InvoiceID, StockItemID, Description, Quantity,
+    UnitPrice, TaxRate, TaxAmount, LineProfit, ExtendedPrice, LastEditedBy
+)
+SELECT 
+    il.InvoiceLineID, il.InvoiceID, il.StockItemID, il.Description, il.Quantity,
+    il.UnitPrice, il.TaxRate, il.TaxAmount, il.LineProfit, il.ExtendedPrice, il.LastEditedBy
+FROM WideWorldImporters.Sales.InvoiceLines il
+INNER JOIN WideWorldImporters.Sales.Invoices i ON i.InvoiceID = il.InvoiceID
+WHERE i.CustomerID % 2 = 1; -- Solo líneas de facturas que ya migramos
+SET IDENTITY_INSERT Sales.InvoiceLines_SJ OFF;
+
+PRINT '  - Líneas de factura SanJose migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Órdenes de compra de SanJose (50% - PurchaseOrderID impar)
+SET IDENTITY_INSERT Purchasing.PurchaseOrders_SJ ON;
+INSERT INTO Purchasing.PurchaseOrders_SJ
+(
+    PurchaseOrderID, SupplierID, OrderDate, ExpectedDeliveryDate,
+    DeliveryMethodID, ContactPersonID, SupplierReference,
+    IsOrderFinalized, LastEditedBy
+)
+SELECT 
+    PurchaseOrderID, SupplierID, OrderDate, ExpectedDeliveryDate,
+    DeliveryMethodID, ContactPersonID, SupplierReference,
+    IsOrderFinalized, LastEditedBy
+FROM WideWorldImporters.Purchasing.PurchaseOrders
+WHERE PurchaseOrderID % 2 = 1; -- Solo IDs impares
+SET IDENTITY_INSERT Purchasing.PurchaseOrders_SJ OFF;
+
+PRINT '  - Órdenes de compra SanJose migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Líneas de órdenes de compra de SanJose
+SET IDENTITY_INSERT Purchasing.PurchaseOrderLines_SJ ON;
+INSERT INTO Purchasing.PurchaseOrderLines_SJ
+(
+    PurchaseOrderLineID, PurchaseOrderID, StockItemID, OrderedOuters,
+    Description, ReceivedOuters, ExpectedUnitPricePerOuter, LastEditedBy
+)
+SELECT 
+    pol.PurchaseOrderLineID, pol.PurchaseOrderID, pol.StockItemID, pol.OrderedOuters,
+    pol.Description, pol.ReceivedOuters, pol.ExpectedUnitPricePerOuter, pol.LastEditedBy
+FROM WideWorldImporters.Purchasing.PurchaseOrderLines pol
+INNER JOIN WideWorldImporters.Purchasing.PurchaseOrders po ON po.PurchaseOrderID = pol.PurchaseOrderID
+WHERE po.PurchaseOrderID % 2 = 1; -- Solo líneas de órdenes que ya migramos
+SET IDENTITY_INSERT Purchasing.PurchaseOrderLines_SJ OFF;
+
+PRINT '  - Líneas de orden de compra SanJose migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Transacciones de inventario de SanJose
+SET IDENTITY_INSERT Warehouse.StockItemTransactions_SJ ON;
+INSERT INTO Warehouse.StockItemTransactions_SJ
+(
+    StockItemTransactionID, StockItemID, TransactionTypeID, CustomerID,
+    InvoiceID, SupplierID, PurchaseOrderID, TransactionOccurredWhen,
+    Quantity, LastEditedBy, LastEditedWhen
+)
+SELECT 
+    StockItemTransactionID, StockItemID, TransactionTypeID, CustomerID,
+    InvoiceID, SupplierID, PurchaseOrderID, TransactionOccurredWhen,
+    Quantity, LastEditedBy, LastEditedWhen
+FROM WideWorldImporters.Warehouse.StockItemTransactions
+WHERE StockItemID % 2 = 1; -- Solo transacciones de productos en inventario de SanJose
+SET IDENTITY_INSERT Warehouse.StockItemTransactions_SJ OFF;
+
+PRINT '  - Transacciones SanJose migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- ============================================================
+-- 7. DATOS OPERATIVOS DE LIMON (Tablas _Limon)
+-- ============================================================
+
+PRINT '';
+PRINT 'Migrando datos operativos de Limon a tablas _Limon...';
+GO
+
+-- Inventario de Limon (50% - StockItemID par)
+INSERT INTO Warehouse.StockItemHoldings_Limon
+(
+    StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity,
+    LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen
+)
+SELECT 
+    StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity,
+    LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen
+FROM WideWorldImporters.Warehouse.StockItemHoldings
+WHERE StockItemID % 2 = 0; -- Solo IDs pares
+
+PRINT '  - Inventario Limon migrado: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Facturas de Limon (50% - CustomerID par)
+SET IDENTITY_INSERT Sales.Invoices_Limon ON;
+INSERT INTO Sales.Invoices_Limon
+(
+    InvoiceID, CustomerID, InvoiceDate, DeliveryMethodID,
+    CustomerPurchaseOrderNumber, ContactPersonID, SalespersonPersonID,
+    DeliveryInstructions, LastEditedBy
+)
+SELECT 
+    InvoiceID, CustomerID, InvoiceDate, DeliveryMethodID,
+    CustomerPurchaseOrderNumber, ContactPersonID, SalespersonPersonID,
+    DeliveryInstructions, LastEditedBy
+FROM WideWorldImporters.Sales.Invoices
+WHERE CustomerID % 2 = 0; -- Solo clientes con ID par
+SET IDENTITY_INSERT Sales.Invoices_Limon OFF;
+
+PRINT '  - Facturas Limon migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Líneas de facturas de Limon
+SET IDENTITY_INSERT Sales.InvoiceLines_Limon ON;
+INSERT INTO Sales.InvoiceLines_Limon
+(
+    InvoiceLineID, InvoiceID, StockItemID, Description, Quantity,
+    UnitPrice, TaxRate, TaxAmount, LineProfit, ExtendedPrice, LastEditedBy
+)
+SELECT 
+    il.InvoiceLineID, il.InvoiceID, il.StockItemID, il.Description, il.Quantity,
+    il.UnitPrice, il.TaxRate, il.TaxAmount, il.LineProfit, il.ExtendedPrice, il.LastEditedBy
+FROM WideWorldImporters.Sales.InvoiceLines il
+INNER JOIN WideWorldImporters.Sales.Invoices i ON i.InvoiceID = il.InvoiceID
+WHERE i.CustomerID % 2 = 0; -- Solo líneas de facturas que ya migramos
+SET IDENTITY_INSERT Sales.InvoiceLines_Limon OFF;
+
+PRINT '  - Líneas de factura Limon migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Órdenes de compra de Limon (50% - PurchaseOrderID par)
+SET IDENTITY_INSERT Purchasing.PurchaseOrders_Limon ON;
+INSERT INTO Purchasing.PurchaseOrders_Limon
+(
+    PurchaseOrderID, SupplierID, OrderDate, ExpectedDeliveryDate,
+    DeliveryMethodID, ContactPersonID, SupplierReference,
+    IsOrderFinalized, LastEditedBy
+)
+SELECT 
+    PurchaseOrderID, SupplierID, OrderDate, ExpectedDeliveryDate,
+    DeliveryMethodID, ContactPersonID, SupplierReference,
+    IsOrderFinalized, LastEditedBy
+FROM WideWorldImporters.Purchasing.PurchaseOrders
+WHERE PurchaseOrderID % 2 = 0; -- Solo IDs pares
+SET IDENTITY_INSERT Purchasing.PurchaseOrders_Limon OFF;
+
+PRINT '  - Órdenes de compra Limon migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Líneas de órdenes de compra de Limon
+SET IDENTITY_INSERT Purchasing.PurchaseOrderLines_Limon ON;
+INSERT INTO Purchasing.PurchaseOrderLines_Limon
+(
+    PurchaseOrderLineID, PurchaseOrderID, StockItemID, OrderedOuters,
+    Description, ReceivedOuters, ExpectedUnitPricePerOuter, LastEditedBy
+)
+SELECT 
+    pol.PurchaseOrderLineID, pol.PurchaseOrderID, pol.StockItemID, pol.OrderedOuters,
+    pol.Description, pol.ReceivedOuters, pol.ExpectedUnitPricePerOuter, pol.LastEditedBy
+FROM WideWorldImporters.Purchasing.PurchaseOrderLines pol
+INNER JOIN WideWorldImporters.Purchasing.PurchaseOrders po ON po.PurchaseOrderID = pol.PurchaseOrderID
+WHERE po.PurchaseOrderID % 2 = 0; -- Solo líneas de órdenes que ya migramos
+SET IDENTITY_INSERT Purchasing.PurchaseOrderLines_Limon OFF;
+
+PRINT '  - Líneas de orden de compra Limon migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- Transacciones de inventario de Limon
+SET IDENTITY_INSERT Warehouse.StockItemTransactions_Limon ON;
+INSERT INTO Warehouse.StockItemTransactions_Limon
+(
+    StockItemTransactionID, StockItemID, TransactionTypeID, CustomerID,
+    InvoiceID, SupplierID, PurchaseOrderID, TransactionOccurredWhen,
+    Quantity, LastEditedBy, LastEditedWhen
+)
+SELECT 
+    StockItemTransactionID, StockItemID, TransactionTypeID, CustomerID,
+    InvoiceID, SupplierID, PurchaseOrderID, TransactionOccurredWhen,
+    Quantity, LastEditedBy, LastEditedWhen
+FROM WideWorldImporters.Warehouse.StockItemTransactions
+WHERE StockItemID % 2 = 0; -- Solo transacciones de productos en inventario de Limon
+SET IDENTITY_INSERT Warehouse.StockItemTransactions_Limon OFF;
+
+PRINT '  - Transacciones Limon migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
+GO
+
+-- ============================================================
 -- RESUMEN DE MIGRACIÓN
 -- ============================================================
 
@@ -238,19 +473,39 @@ PRINT '========================================';
 PRINT 'MIGRACIÓN A WWI_CORPORATIVO COMPLETADA';
 PRINT '========================================';
 PRINT '';
-PRINT 'Datos migrados:';
+PRINT 'DATOS COMPARTIDOS (idénticos en las 3 bases):';
 PRINT '  ✓ Datos geográficos (Countries, StateProvinces, Cities)';
 PRINT '  ✓ Datos sensibles de clientes (CustomerSensitiveData)';
 PRINT '  ✓ Catálogos de referencia (Colors, StockGroups, PackageTypes, etc.)';
 PRINT '  ✓ Catálogo COMPLETO de productos (StockItems, StockItemStockGroups)';
 PRINT '  ✓ Catálogos completos (Suppliers, Customers sin sensibles)';
 PRINT '';
-PRINT 'NOTA: Catálogo de productos debe estar IDÉNTICO en las 3 bases';
-PRINT '      ANTES de configurar Merge Replication.';
+PRINT 'DATOS OPERATIVOS DE SANJOSE (Tablas _SJ):';
+PRINT '  ✓ 50% del inventario (StockItemID impar)';
+PRINT '  ✓ 50% de las facturas (CustomerID impar)';
+PRINT '  ✓ 50% de las órdenes de compra (PurchaseOrderID impar)';
+PRINT '  ✓ Transacciones de inventario relacionadas';
 PRINT '';
-PRINT 'ARQUITECTURA:';
-PRINT '  • Catálogos estáticos: Cargados IDÉNTICOS (sin SucursalOrigen)';
-PRINT '  • Productos (StockItems): IDÉNTICOS inicialmente, cambios futuros se replican';
-PRINT '  • Datos operativos: Particionados por sucursal (NO se replican)';
+PRINT 'DATOS OPERATIVOS DE LIMON (Tablas _Limon):';
+PRINT '  ✓ 50% del inventario (StockItemID par)';
+PRINT '  ✓ 50% de las facturas (CustomerID par)';
+PRINT '  ✓ 50% de las órdenes de compra (PurchaseOrderID par)';
+PRINT '  ✓ Transacciones de inventario relacionadas';
+PRINT '';
+PRINT 'ARQUITECTURA DE REPLICACIÓN:';
+PRINT '  • Tablas _SJ: Réplicas exactas de SanJose';
+PRINT '  • Tablas _Limon: Réplicas exactas de Limon';
+PRINT '  • Sin columna SucursalOrigen (tablas separadas por sucursal)';
+PRINT '';
+PRINT 'ESTADO INICIAL:';
+PRINT '  ✓ Las 3 bases tienen EXACTAMENTE los mismos datos iniciales';
+PRINT '  ✓ Replicación lista para capturar cambios FUTUROS';
+PRINT '';
+PRINT 'PRÓXIMOS PASOS:';
+PRINT '  1. Configurar replicación transaccional unidireccional:';
+PRINT '     - SanJose.StockItemHoldings_SJ → CORP.StockItemHoldings_SJ';
+PRINT '     - Limon.StockItemHoldings_Limon → CORP.StockItemHoldings_Limon';
+PRINT '     (y así con las 6 tablas operativas)';
+PRINT '  2. Usar @sync_type = ''replication support only'' (sin snapshot)';
 PRINT '';
 GO

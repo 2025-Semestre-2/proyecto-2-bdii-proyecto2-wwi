@@ -198,7 +198,7 @@ GO
 PRINT 'Migrando inventario propio de Limon (50% - IDs pares)...';
 GO
 
-INSERT INTO Warehouse.StockItemHoldings
+INSERT INTO Warehouse.StockItemHoldings_Limon
 (
     StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity,
     LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen
@@ -219,8 +219,8 @@ GO
 PRINT 'Migrando facturas propias de Limon (50% - CustomerID par)...';
 GO
 
-SET IDENTITY_INSERT Sales.Invoices ON;
-INSERT INTO Sales.Invoices
+SET IDENTITY_INSERT Sales.Invoices_Limon ON;
+INSERT INTO Sales.Invoices_Limon
 (
     InvoiceID, CustomerID, InvoiceDate, DeliveryMethodID,
     CustomerPurchaseOrderNumber, ContactPersonID, SalespersonPersonID,
@@ -232,14 +232,14 @@ SELECT
     DeliveryInstructions, LastEditedBy
 FROM WideWorldImporters.Sales.Invoices
 WHERE CustomerID % 2 = 0; -- Solo clientes con ID par (complementario a SanJose)
-SET IDENTITY_INSERT Sales.Invoices OFF;
+SET IDENTITY_INSERT Sales.Invoices_Limon OFF;
 
 DECLARE @InvoiceCount INT = @@ROWCOUNT;
 PRINT '  - Facturas migradas: ' + CAST(@InvoiceCount AS NVARCHAR(10));
 GO
 
-SET IDENTITY_INSERT Sales.InvoiceLines ON;
-INSERT INTO Sales.InvoiceLines
+SET IDENTITY_INSERT Sales.InvoiceLines_Limon ON;
+INSERT INTO Sales.InvoiceLines_Limon
 (
     InvoiceLineID, InvoiceID, StockItemID, Description, Quantity,
     UnitPrice, TaxRate, TaxAmount, LineProfit, ExtendedPrice, LastEditedBy
@@ -250,7 +250,7 @@ SELECT
 FROM WideWorldImporters.Sales.InvoiceLines il
 INNER JOIN WideWorldImporters.Sales.Invoices i ON i.InvoiceID = il.InvoiceID
 WHERE i.CustomerID % 2 = 0; -- Solo líneas de facturas que ya migramos
-SET IDENTITY_INSERT Sales.InvoiceLines OFF;
+SET IDENTITY_INSERT Sales.InvoiceLines_Limon OFF;
 
 PRINT '  - Líneas de factura migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
 GO
@@ -262,8 +262,8 @@ GO
 PRINT 'Migrando órdenes de compra propias de Limon (50% - PurchaseOrderID par)...';
 GO
 
-SET IDENTITY_INSERT Purchasing.PurchaseOrders ON;
-INSERT INTO Purchasing.PurchaseOrders
+SET IDENTITY_INSERT Purchasing.PurchaseOrders_Limon ON;
+INSERT INTO Purchasing.PurchaseOrders_Limon
 (
     PurchaseOrderID, SupplierID, OrderDate, ExpectedDeliveryDate,
     DeliveryMethodID, ContactPersonID, SupplierReference,
@@ -275,13 +275,13 @@ SELECT
     IsOrderFinalized, LastEditedBy
 FROM WideWorldImporters.Purchasing.PurchaseOrders
 WHERE PurchaseOrderID % 2 = 0; -- Solo IDs pares (complementario a SanJose)
-SET IDENTITY_INSERT Purchasing.PurchaseOrders OFF;
+SET IDENTITY_INSERT Purchasing.PurchaseOrders_Limon OFF;
 
 PRINT '  - Órdenes de compra migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
 GO
 
-SET IDENTITY_INSERT Purchasing.PurchaseOrderLines ON;
-INSERT INTO Purchasing.PurchaseOrderLines
+SET IDENTITY_INSERT Purchasing.PurchaseOrderLines_Limon ON;
+INSERT INTO Purchasing.PurchaseOrderLines_Limon
 (
     PurchaseOrderLineID, PurchaseOrderID, StockItemID, OrderedOuters,
     Description, ReceivedOuters, ExpectedUnitPricePerOuter, LastEditedBy
@@ -292,7 +292,7 @@ SELECT
 FROM WideWorldImporters.Purchasing.PurchaseOrderLines pol
 INNER JOIN WideWorldImporters.Purchasing.PurchaseOrders po ON po.PurchaseOrderID = pol.PurchaseOrderID
 WHERE po.PurchaseOrderID % 2 = 0; -- Solo líneas de órdenes que ya migramos
-SET IDENTITY_INSERT Purchasing.PurchaseOrderLines OFF;
+SET IDENTITY_INSERT Purchasing.PurchaseOrderLines_Limon OFF;
 
 PRINT '  - Líneas de orden de compra migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
 GO
@@ -304,8 +304,8 @@ GO
 PRINT 'Migrando transacciones de inventario...';
 GO
 
-SET IDENTITY_INSERT Warehouse.StockItemTransactions ON;
-INSERT INTO Warehouse.StockItemTransactions
+SET IDENTITY_INSERT Warehouse.StockItemTransactions_Limon ON;
+INSERT INTO Warehouse.StockItemTransactions_Limon
 (
     StockItemTransactionID, StockItemID, TransactionTypeID, CustomerID,
     InvoiceID, SupplierID, PurchaseOrderID, TransactionOccurredWhen,
@@ -317,7 +317,7 @@ SELECT
     Quantity, LastEditedBy, LastEditedWhen
 FROM WideWorldImporters.Warehouse.StockItemTransactions
 WHERE StockItemID % 2 = 0; -- Solo transacciones de productos en nuestro inventario (IDs pares)
-SET IDENTITY_INSERT Warehouse.StockItemTransactions OFF;
+SET IDENTITY_INSERT Warehouse.StockItemTransactions_Limon OFF;
 
 PRINT '  - Transacciones migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
 GO

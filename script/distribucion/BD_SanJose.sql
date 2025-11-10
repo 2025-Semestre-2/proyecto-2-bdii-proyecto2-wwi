@@ -140,7 +140,7 @@ CREATE TABLE Sales.Customers (
 GO
 
 -- Tabla de facturas (Invoices)
-CREATE TABLE Sales.Invoices (
+CREATE TABLE Sales.Invoices_SJ (
     InvoiceID INT PRIMARY KEY IDENTITY(1,1),
     CustomerID INT NOT NULL,
     InvoiceDate DATE NOT NULL,
@@ -150,7 +150,6 @@ CREATE TABLE Sales.Invoices (
     SalespersonPersonID INT NOT NULL,
     DeliveryInstructions NVARCHAR(MAX) NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (CustomerID) REFERENCES Sales.Customers(CustomerID),
     FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
     FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID),
@@ -233,7 +232,7 @@ CREATE TABLE Purchasing.Suppliers (
 );
 GO
 
-CREATE TABLE Purchasing.PurchaseOrders (
+CREATE TABLE Purchasing.PurchaseOrders_SJ (
     PurchaseOrderID INT PRIMARY KEY IDENTITY(1,1),
     SupplierID INT NOT NULL,
     OrderDate DATE NOT NULL,
@@ -243,7 +242,6 @@ CREATE TABLE Purchasing.PurchaseOrders (
     SupplierReference NVARCHAR(20) NULL,
     IsOrderFinalized BIT NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (SupplierID) REFERENCES Purchasing.Suppliers(SupplierID),
     FOREIGN KEY (DeliveryMethodID) REFERENCES Application.DeliveryMethods(DeliveryMethodID),
     FOREIGN KEY (ContactPersonID) REFERENCES Application.People(PersonID)
@@ -286,7 +284,7 @@ CREATE TABLE Warehouse.StockItems (
 GO
 
 -- Tabla de holdings de stock (inventario disponible)
-CREATE TABLE Warehouse.StockItemHoldings (
+CREATE TABLE Warehouse.StockItemHoldings_SJ (
     StockItemID INT PRIMARY KEY,
     QuantityOnHand INT NOT NULL,
     BinLocation NVARCHAR(20) NOT NULL,
@@ -296,7 +294,6 @@ CREATE TABLE Warehouse.StockItemHoldings (
     TargetStockLevel INT NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
@@ -312,8 +309,8 @@ CREATE TABLE Warehouse.StockItemStockGroups (
 );
 GO
 
--- Tabla de transacciones de stock
-CREATE TABLE Warehouse.StockItemTransactions (
+-- Tabla de transacciones de stock (movimientos de inventario)
+CREATE TABLE Warehouse.StockItemTransactions_SJ (
     StockItemTransactionID INT PRIMARY KEY IDENTITY(1,1),
     StockItemID INT NOT NULL,
     TransactionTypeID INT NOT NULL,
@@ -325,13 +322,12 @@ CREATE TABLE Warehouse.StockItemTransactions (
     Quantity DECIMAL(18,3) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
     LastEditedWhen DATETIME2 NOT NULL,
-    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
 
 -- Tabla de líneas de facturas (detalle de ventas)
-CREATE TABLE Sales.InvoiceLines (
+CREATE TABLE Sales.InvoiceLines_SJ (
     InvoiceLineID INT PRIMARY KEY IDENTITY(1,1),
     InvoiceID INT NOT NULL,
     StockItemID INT NOT NULL,
@@ -343,14 +339,13 @@ CREATE TABLE Sales.InvoiceLines (
     LineProfit DECIMAL(18,2) NOT NULL,
     ExtendedPrice DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
-    FOREIGN KEY (InvoiceID) REFERENCES Sales.Invoices(InvoiceID),
+    FOREIGN KEY (InvoiceID) REFERENCES Sales.Invoices_SJ(InvoiceID),
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID)
 );
 GO
 
 -- Tabla de órdenes de compra (para relación con proveedores)
-CREATE TABLE Purchasing.PurchaseOrderLines (
+CREATE TABLE Purchasing.PurchaseOrderLines_SJ (
     PurchaseOrderLineID INT PRIMARY KEY IDENTITY(1,1),
     PurchaseOrderID INT NOT NULL,
     StockItemID INT NOT NULL,
@@ -359,9 +354,8 @@ CREATE TABLE Purchasing.PurchaseOrderLines (
     ReceivedOuters INT NOT NULL,
     ExpectedUnitPricePerOuter DECIMAL(18,2) NOT NULL,
     LastEditedBy INT NOT NULL DEFAULT 1,
-    SucursalOrigen NVARCHAR(50) NOT NULL DEFAULT 'SanJose', -- Identificador de sucursal
     FOREIGN KEY (StockItemID) REFERENCES Warehouse.StockItems(StockItemID),
-    FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders(PurchaseOrderID)
+    FOREIGN KEY (PurchaseOrderID) REFERENCES Purchasing.PurchaseOrders_SJ(PurchaseOrderID)
 );
 GO
 
