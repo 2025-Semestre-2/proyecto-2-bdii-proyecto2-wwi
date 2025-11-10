@@ -142,6 +142,7 @@ CREATE TABLE Application.People (
 );
 GO
 
+
 -- Tabla de métodos de entrega (réplica)
 CREATE TABLE Application.DeliveryMethods (
     DeliveryMethodID INT PRIMARY KEY,

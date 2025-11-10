@@ -322,6 +322,8 @@ SET IDENTITY_INSERT Warehouse.StockItemTransactions_SJ OFF;
 PRINT '  - Transacciones migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
 GO
 
+
+
 -- ============================================================
 -- RESUMEN DE MIGRACIÓN
 -- ============================================================
@@ -338,6 +340,7 @@ PRINT '  ✓ Catálogo completo de productos';
 PRINT '  ✓ 50% del inventario (StockItemID impar)';
 PRINT '  ✓ 50% de las facturas (CustomerID impar)';
 PRINT '  ✓ 50% de las órdenes de compra (PurchaseOrderID impar)';
+PRINT '  ✓ 4 usuarios del sistema (rol: administrador)';
 PRINT '';
 PRINT 'PRÓXIMOS PASOS:';
 PRINT '  1. Configurar REPLICACIÓN TRANSACCIONAL a Corporativo';

@@ -464,6 +464,7 @@ SET IDENTITY_INSERT Warehouse.StockItemTransactions_Limon OFF;
 PRINT '  - Transacciones Limon migradas: ' + CAST(@@ROWCOUNT AS NVARCHAR(10));
 GO
 
+
 -- ============================================================
 -- RESUMEN DE MIGRACIÓN
 -- ============================================================
@@ -479,6 +480,7 @@ PRINT '  ✓ Datos sensibles de clientes (CustomerSensitiveData)';
 PRINT '  ✓ Catálogos de referencia (Colors, StockGroups, PackageTypes, etc.)';
 PRINT '  ✓ Catálogo COMPLETO de productos (StockItems, StockItemStockGroups)';
 PRINT '  ✓ Catálogos completos (Suppliers, Customers sin sensibles)';
+PRINT '  ✓ 3 usuarios del sistema (rol: corporativo)';
 PRINT '';
 PRINT 'DATOS OPERATIVOS DE SANJOSE (Tablas _SJ):';
 PRINT '  ✓ 50% del inventario (StockItemID impar)';
