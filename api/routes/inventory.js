@@ -1,109 +1,162 @@
 const express = require('express');
-const { sql, config } = require('../config');
+const { sql, getPool } = require('../config');
 const router = express.Router();
 
-let pool;
-sql.connect(config)
-  .then(p => { pool = p; console.log('Inventario listo'); })
-  .catch(err => console.error('Inventario - conexión:', err.message));
-
+// ============================================================
+// GET /api/inventario
+// Obtiene lista de productos del inventario
+// ============================================================
 router.get('/', async (req, res) => {
   const { search, group } = req.query;
+  
   try {
-    const r = await pool.request()
+    const pool = await getPool(req.sucursal);
+    
+    const result = await pool.request()
       .input('search', sql.NVarChar, search || null)
       .input('group',  sql.NVarChar, group  || null)
       .execute('sp_obtenerInventario');
-    res.json(r.recordset);
-  } catch (e) {
-    console.error('sp_obtenerInventario:', e);
-    res.status(500).json({ error: 'Error consultando inventario' });
+    
+    res.json(result.recordset);
+  } catch (error) {
+    console.error(` Error en sp_obtenerInventario (${req.sucursal}):`, error);
+    res.status(500).json({ 
+      error: 'Error consultando inventario',
+      details: error.message 
+    });
   }
 });
 
+// ============================================================
+// GET /api/inventario/:id
+// Obtiene detalle completo de un producto
+// ============================================================
 router.get('/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+  
+  if (Number.isNaN(id)) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
 
   try {
-    const r = await pool.request()
+    const pool = await getPool(req.sucursal);
+    
+    const result = await pool.request()
       .input('stockitemid', sql.Int, id)
       .execute('dbo.sp_obtenerDetalleInventario');
 
-    const [gen = [], hold = [], prov = []] = r.recordsets || [];
+    const [gen = [], hold = [], prov = []] = result.recordsets || [];
+    
     res.json({
       general:   gen[0]   || null,
       holdings:  hold[0]  || null,
       proveedor: prov[0]  || null,
     });
-  } catch (e) {
-    console.error('sp_obtenerDetalleInventario:', e);
-    res.status(500).json({ error: 'Error consultando detalle de inventario' });
+  } catch (error) {
+    console.error(` Error en sp_obtenerDetalleInventario (${req.sucursal}):`, error);
+    res.status(500).json({ 
+      error: 'Error consultando detalle de inventario',
+      details: error.message 
+    });
   }
 });
 
-// Endpoints auxiliares para obtener datos de referencia
+// ============================================================
+// ENDPOINTS DE REFERENCIA PARA DROPDOWNS
+// ============================================================
+
 router.get('/reference/suppliers', async (req, res) => {
   try {
-    const r = await pool.request().execute('SP_GetSuppliersForProducts');
-    res.json(r.recordset);
-  } catch (e) {
-    console.error('SP_GetSuppliersForProducts:', e);
-    res.status(500).json({ error: 'Error consultando proveedores' });
+    const pool = await getPool(req.sucursal);
+    const result = await pool.request().execute('SP_GetSuppliersForProducts');
+    res.json(result.recordset);
+  } catch (error) {
+    console.error(` Error en SP_GetSuppliersForProducts (${req.sucursal}):`, error);
+    res.status(500).json({ 
+      error: 'Error consultando proveedores',
+      details: error.message 
+    });
   }
 });
 
 router.get('/reference/colors', async (req, res) => {
   try {
-    const r = await pool.request().execute('SP_GetColorsForProducts');
-    res.json(r.recordset);
-  } catch (e) {
-    console.error('SP_GetColorsForProducts:', e);
-    res.status(500).json({ error: 'Error consultando colores' });
+    const pool = await getPool(req.sucursal);
+    const result = await pool.request().execute('SP_GetColorsForProducts');
+    res.json(result.recordset);
+  } catch (error) {
+    console.error(` Error en SP_GetColorsForProducts (${req.sucursal}):`, error);
+    res.status(500).json({ 
+      error: 'Error consultando colores',
+      details: error.message 
+    });
   }
 });
 
 router.get('/reference/packages', async (req, res) => {
   try {
-    const r = await pool.request().execute('SP_GetPackageTypesForProducts');
-    res.json(r.recordset);
-  } catch (e) {
-    console.error('SP_GetPackageTypesForProducts:', e);
-    res.status(500).json({ error: 'Error consultando tipos de empaque' });
+    const pool = await getPool(req.sucursal);
+    const result = await pool.request().execute('SP_GetPackageTypesForProducts');
+    res.json(result.recordset);
+  } catch (error) {
+    console.error(` Error en SP_GetPackageTypesForProducts (${req.sucursal}):`, error);
+    res.status(500).json({ 
+      error: 'Error consultando tipos de empaque',
+      details: error.message 
+    });
   }
 });
 
 router.get('/reference/stockgroups', async (req, res) => {
   try {
-    const r = await pool.request().execute('SP_GetStockGroupsForProducts');
-    res.json(r.recordset);
-  } catch (e) {
-    console.error('SP_GetStockGroupsForProducts:', e);
-    res.status(500).json({ error: 'Error consultando grupos de productos' });
+    const pool = await getPool(req.sucursal);
+    const result = await pool.request().execute('SP_GetStockGroupsForProducts');
+    res.json(result.recordset);
+  } catch (error) {
+    console.error(` Error en SP_GetStockGroupsForProducts (${req.sucursal}):`, error);
+    res.status(500).json({ 
+      error: 'Error consultando grupos de productos',
+      details: error.message 
+    });
   }
 });
 
 router.get('/reference/stockgroups/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+  
+  if (Number.isNaN(id)) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
   
   try {
-    const r = await pool.request()
+    const pool = await getPool(req.sucursal);
+    const result = await pool.request()
       .input('StockItemID', sql.Int, id)
       .execute('SP_GetProductStockGroups');
-    res.json(r.recordset);
-  } catch (e) {
-    console.error('SP_GetProductStockGroups:', e);
-    res.status(500).json({ error: 'Error consultando grupos del producto' });
+    res.json(result.recordset);
+  } catch (error) {
+    console.error(` Error en SP_GetProductStockGroups (${req.sucursal}):`, error);
+    res.status(500).json({ 
+      error: 'Error consultando grupos del producto',
+      details: error.message 
+    });
   }
 });
 
-// Verificar si un producto puede ser eliminado
+// ============================================================
+// GET /api/inventario/check/:id
+// Verifica si un producto puede ser eliminado
+// ============================================================
 router.get('/check/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+  
+  if (Number.isNaN(id)) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
   
   try {
+    const pool = await getPool(req.sucursal);
+    
     // Verificar si existe
     const existsResult = await pool.request()
       .input('StockItemID', sql.Int, id)
@@ -136,17 +189,26 @@ router.get('/check/:id', async (req, res) => {
         ? 'El producto puede ser eliminado' 
         : 'El producto tiene transacciones asociadas y no puede ser eliminado'
     });
-  } catch (e) {
-    console.error('Error verificando producto:', e);
-    res.status(500).json({ error: 'Error verificando producto' });
+  } catch (error) {
+    console.error(` Error verificando producto (${req.sucursal}):`, error);
+    res.status(500).json({ 
+      error: 'Error verificando producto',
+      details: error.message 
+    });
   }
 });
 
+// ============================================================
+// POST /api/inventario
+// Crea un nuevo producto en el inventario
+// ============================================================
 router.post('/', async (req, res) => {
   const b = req.body || {};
   
   try {
-    const r = await pool.request()
+    const pool = await getPool(req.sucursal);
+    
+    const result = await pool.request()
       .input('NombreProducto',          sql.NVarChar(255),  b.NombreProducto || b.StockItemName || null)
       .input('SupplierID',              sql.Int,            b.SupplierID != null ? Number(b.SupplierID) : null)
       .input('ColorID',                 sql.Int,            b.ColorID != null ? Number(b.ColorID) : null)
@@ -170,20 +232,29 @@ router.post('/', async (req, res) => {
       .input('StockGroupIDs',           sql.NVarChar(sql.MAX), b.StockGroupIDs || null)
       .execute('SP_InsertProduct');
 
-    const id = r?.recordset?.[0]?.NewStockItemID ?? r?.returnValue ?? null;
+    const id = result?.recordset?.[0]?.NewStockItemID ?? result?.returnValue ?? null;
     res.json({ ok: true, id });
-  } catch (e) {
-    console.error('SP_InsertProduct:', e);
-    res.status(400).json({ ok: false, error: e.message || 'Error insertando producto' });
+  } catch (error) {
+    console.error(` Error en SP_InsertProduct (${req.sucursal}):`, error);
+    res.status(400).json({ 
+      ok: false, 
+      error: error.message || 'Error insertando producto' 
+    });
   }
 });
 
+// ============================================================
+// PUT /api/inventario/:id
+// Actualiza un producto existente en el inventario
+// ============================================================
 router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const b  = req.body || {};
   
   try {
-    const r = await pool.request()
+    const pool = await getPool(req.sucursal);
+    
+    const result = await pool.request()
       .input('StockItemID',             sql.Int,            id)
       .input('NombreProducto',          sql.NVarChar(255),  b.NombreProducto || b.StockItemName || null)
       .input('SupplierID',              sql.Int,            b.SupplierID != null ? Number(b.SupplierID) : null)
@@ -208,23 +279,34 @@ router.put('/:id', async (req, res) => {
       .input('StockGroupIDs',           sql.NVarChar(sql.MAX), b.StockGroupIDs !== undefined ? b.StockGroupIDs : null)
       .execute('SP_UpdateProduct');
 
-    const updated = r?.recordset?.[0]?.UpdatedStockItemID ?? id;
+    const updated = result?.recordset?.[0]?.UpdatedStockItemID ?? id;
     res.json({ ok: true, id: updated });
-  } catch (e) {
-    console.error('SP_UpdateProduct:', e);
-    res.status(400).json({ ok: false, error: e.message || 'Error actualizando producto' });
+  } catch (error) {
+    console.error(` Error en SP_UpdateProduct (${req.sucursal}):`, error);
+    res.status(400).json({ 
+      ok: false, 
+      error: error.message || 'Error actualizando producto' 
+    });
   }
 });
 
+// ============================================================
+// DELETE /api/inventario/:id
+// Elimina un producto del inventario (con validaciones)
+// ============================================================
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
+  
   try {
+    const pool = await getPool(req.sucursal);
+    
     // 1. Verificar si el producto existe
     const existsResult = await pool.request()
       .input('StockItemID', sql.Int, id)
       .execute('SP_CheckProductExists');
     
     const exists = existsResult?.recordset?.[0]?.ProductExists;
+    
     if (!exists) {
       return res.status(404).json({ 
         ok: false, 
@@ -238,6 +320,7 @@ router.delete('/:id', async (req, res) => {
       .execute('SP_CheckProductCriticalTransactions');
     
     const critical = criticalResult?.recordset?.[0];
+    
     if (critical?.HasCriticalTransactions) {
       return res.status(400).json({ 
         ok: false, 
@@ -253,15 +336,18 @@ router.delete('/:id', async (req, res) => {
     }
 
     // 3. Si todo está bien, proceder con la eliminación
-    const r = await pool.request()
+    const result = await pool.request()
       .input('StockItemID', sql.Int, id)
       .execute('SP_DeleteProduct');
 
-    const deleted = r?.recordset?.[0]?.DeletedStockItemID ?? id;
+    const deleted = result?.recordset?.[0]?.DeletedStockItemID ?? id;
     res.json({ ok: true, id: deleted });
-  } catch (e) {
-    console.error('SP_DeleteProduct:', e);
-    res.status(400).json({ ok: false, error: e.message || 'Error eliminando producto' });
+  } catch (error) {
+    console.error(` Error en SP_DeleteProduct (${req.sucursal}):`, error);
+    res.status(400).json({ 
+      ok: false, 
+      error: error.message || 'Error eliminando producto' 
+    });
   }
 });
 
