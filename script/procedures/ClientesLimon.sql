@@ -59,7 +59,8 @@ AS
 BEGIN
   SET NOCOUNT ON;
 
-  -- Datos básicos del cliente (SIN datos sensibles en sucursales)
+  -- Datos básicos del cliente
+  -- NOTA: En sucursales NO se muestran datos sensibles por diseño de seguridad
   SELECT
     c.CustomerID,
     c.CustomerName,
@@ -68,7 +69,7 @@ BEGIN
     c.BillToCustomerID,
     c.PaymentDays,
     
-    -- Información de entrega (sin datos sensibles)
+    -- Información de entrega
     c.DeliveryCityID,
     c.DeliveryMethodID,
     dm.DeliveryMethodName,
@@ -83,7 +84,7 @@ BEGIN
     p1.FullName AS PrimaryContactName,
     p2.FullName AS AlternateContactName,
     
-    -- DATOS SENSIBLES: NULL en sucursales (solo disponibles en Corporativo)
+    -- DATOS SENSIBLES: No disponibles en sucursales (solo en Corporativo)
     NULL AS WebsiteURL,
     NULL AS PhoneNumber,
     NULL AS FaxNumber,
