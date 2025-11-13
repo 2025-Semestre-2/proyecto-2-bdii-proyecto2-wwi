@@ -59,7 +59,7 @@ AS
 BEGIN
   SET NOCOUNT ON;
 
-  -- Datos básicos del cliente con datos sensibles
+  -- Datos básicos del cliente (SIN datos sensibles en sucursales)
   SELECT
     c.CustomerID,
     c.CustomerName,
@@ -68,18 +68,10 @@ BEGIN
     c.BillToCustomerID,
     c.PaymentDays,
     
-    -- Información de entrega
+    -- Información de entrega (sin datos sensibles)
     c.DeliveryCityID,
     c.DeliveryMethodID,
     dm.DeliveryMethodName,
-    -- DeliveryLocation desde datos sensibles (reconstruido desde Lat/Long)
-    CASE 
-      WHEN sens.Lat IS NOT NULL AND sens.Lng IS NOT NULL 
-      THEN geography::Point(sens.Lat, sens.Lng, 4326)
-      ELSE NULL 
-    END AS DeliveryLocation,
-    sens.Lat AS Lat,
-    sens.Lng AS Lng,
     
     -- Información geográfica
     cit.CityID               AS DeliveryCityID,
@@ -91,13 +83,16 @@ BEGIN
     p1.FullName AS PrimaryContactName,
     p2.FullName AS AlternateContactName,
     
-    -- DATOS SENSIBLES desde Corporativo (via OPENQUERY)
-    sens.WebsiteURL,
-    sens.PhoneNumber,
-    sens.FaxNumber,
-    sens.DeliveryAddressLine1,
-    sens.DeliveryAddressLine2,
-    sens.DeliveryPostalCode  AS CodigoPostal
+    -- DATOS SENSIBLES: NULL en sucursales (solo disponibles en Corporativo)
+    NULL AS WebsiteURL,
+    NULL AS PhoneNumber,
+    NULL AS FaxNumber,
+    NULL AS DeliveryAddressLine1,
+    NULL AS DeliveryAddressLine2,
+    NULL AS CodigoPostal,
+    NULL AS DeliveryLocation,
+    NULL AS Lat,
+    NULL AS Lng
 
   FROM Sales.Customers c
   LEFT JOIN Sales.CustomerCategories   cat ON cat.CustomerCategoryID   = c.CustomerCategoryID
@@ -108,22 +103,6 @@ BEGIN
   LEFT JOIN Application.Countries     co  ON co.CountryID              = sp.CountryID
   LEFT JOIN Application.People        p1  ON p1.PersonID               = c.PrimaryContactPersonID
   LEFT JOIN Application.People        p2  ON p2.PersonID               = c.AlternateContactPersonID
-  
-  -- Consulta datos sensibles usando OPENQUERY (evita problemas con tipos CLR)
-  -- NOTA: Convertimos DeliveryLocation a Lat/Long en el servidor remoto
-  --       para evitar problemas con tipo GEOGRAPHY (CLR)
-  LEFT JOIN OPENQUERY(sql_corp, 'SELECT 
-      CustomerID,
-      WebsiteURL,
-      PhoneNumber,
-      FaxNumber,
-      DeliveryAddressLine1,
-      DeliveryAddressLine2,
-      DeliveryPostalCode,
-      DeliveryLocation.Lat AS Lat,
-      DeliveryLocation.Long AS Lng
-    FROM WWI_Corporativo.Sales.CustomerSensitiveData') sens
-    ON sens.CustomerID = c.CustomerID
     
   WHERE c.CustomerID = @customerid;
 END;

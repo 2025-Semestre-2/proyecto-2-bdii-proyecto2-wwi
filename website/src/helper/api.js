@@ -1,9 +1,46 @@
 const BASE = import.meta?.env?.VITE_API_BASE ?? "/api";
 
-async function http(path) {
-  const r = await fetch(`${BASE}${path}`);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+// Obtener el usuario autenticado desde localStorage
+function getUser() {
+  try {
+    const user = localStorage.getItem('wwi_user');
+    return user ? JSON.parse(user) : null;
+  } catch {
+    return null;
+  }
+}
+
+// HTTP helper con header de sucursal automático
+async function http(path, options = {}) {
+  const user = getUser();
+  const headers = {
+    ...options.headers
+  };
+
+  // Agregar header de sucursal si el usuario está autenticado
+  if (user && user.sucursal) {
+    headers['X-Sucursal'] = user.sucursal;
+  }
+
+  console.log(`[API] Request to: ${BASE}${path}`, {
+    sucursal: user?.sucursal,
+    headers: headers
+  });
+
+  const r = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers
+  });
+
+  if (!r.ok) {
+    const error = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+    console.error(`[API] Error response from ${path}:`, error);
+    throw new Error(error.error || error.message || `HTTP ${r.status}`);
+  }
+
+  const responseData = await r.json();
+  console.log(`[API] Success response from ${path}:`, responseData);
+  return responseData;
 }
 
 function qs(obj = {}) {
@@ -16,6 +53,30 @@ function qs(obj = {}) {
 }
 
 export const api = {
+  // ============================================================
+  // AUTENTICACIÓN
+  // ============================================================
+  login: async (username, password, sucursal) => {
+    const response = await fetch(`${BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, sucursal })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al iniciar sesión');
+    }
+
+    return data;
+  },
+
+  getSucursales: () => http('/auth/sucursales'),
+
+  // ============================================================
+  // RECURSOS (requieren autenticación y sucursal)
+  // ============================================================
   // Clientes
   getClientes: (search) => http(`/clientes${qs({ search })}`),
   getCliente:  (id)     => http(`/clientes/${id}`),
@@ -38,32 +99,64 @@ export const api = {
   // Verificar si un producto puede ser eliminado
   checkProductCanDelete: (id) => http(`/inventario/check/${id}`),
   
-  createItem: (payload) =>
-    fetch(`${BASE}/inventario`, {
+  createItem: async (payload) => {
+    const user = getUser();
+    const headers = { 'Content-Type': 'application/json' };
+    if (user?.sucursal) headers['X-Sucursal'] = user.sucursal;
+
+    const r = await fetch(`${BASE}/inventario`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload)
-    }).then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
+    });
 
-  updateItem: (id, payload) =>
-    fetch(`${BASE}/inventario/${id}`, {
+    if (!r.ok) {
+      const error = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+      throw new Error(error.error || `HTTP ${r.status}`);
+    }
+
+    return r.json();
+  },
+
+  updateItem: async (id, payload) => {
+    const user = getUser();
+    const headers = { 'Content-Type': 'application/json' };
+    if (user?.sucursal) headers['X-Sucursal'] = user.sucursal;
+
+    const r = await fetch(`${BASE}/inventario/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload)
-    }).then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
+    });
 
-  deleteItem: (id) =>
-    fetch(`${BASE}/inventario/${id}`, {
-      method: 'DELETE'
-    }).then(async r => { 
-      const data = await r.json();
-      if(!r.ok) {
-        const error = new Error(data.error || `HTTP ${r.status}`);
-        error.details = data.details;
-        throw error;
-      }
-      return data;
-    }),
+    if (!r.ok) {
+      const error = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+      throw new Error(error.error || `HTTP ${r.status}`);
+    }
+
+    return r.json();
+  },
+
+  deleteItem: async (id) => {
+    const user = getUser();
+    const headers = {};
+    if (user?.sucursal) headers['X-Sucursal'] = user.sucursal;
+
+    const r = await fetch(`${BASE}/inventario/${id}`, {
+      method: 'DELETE',
+      headers
+    });
+
+    const data = await r.json();
+
+    if (!r.ok) {
+      const error = new Error(data.error || `HTTP ${r.status}`);
+      error.details = data.details;
+      throw error;
+    }
+
+    return data;
+  },
 
   getVentas: ({ client, from, to, min, max, page = 1, limit = 50 } = {}) => {
     const p = new URLSearchParams();

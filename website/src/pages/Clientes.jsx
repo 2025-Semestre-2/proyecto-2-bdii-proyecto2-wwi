@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "../css/Clientes.css";
 import { api } from "../helper/api";
-import CafeHeader from "../components/Header";
 import { FaSearch, FaSyncAlt, FaTimesCircle } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
@@ -94,8 +93,6 @@ export default function Clientes() {
 
   return (
     <div className="clientes-page">
-      <CafeHeader />
-
       <section className="clientes-hero">
         <div className="hero__copy">
           <h2>Clientes</h2>
@@ -149,14 +146,14 @@ export default function Clientes() {
             <tbody>
               {rows.map((r) => (
                 <tr
-                key={r.customerid}
+                key={r.CustomerID || r.customerid}
                 className="row"
-                onClick={() => navigate(`/clientes/${r.customerid}`)}
+                onClick={() => navigate(`/clientes/${r.CustomerID || r.customerid}`)}
                 >
 
-                  <td className="strong">{r.nombrecliente}</td>
-                  <td>{r.categoria ? <span className="pill">{r.categoria}</span> : "—"}</td>
-                  <td>{r.metodoentrega ?? "—"}</td>
+                  <td className="strong">{r.NombreCliente || r.nombrecliente}</td>
+                  <td>{(r.Categoria || r.categoria) ? <span className="pill">{r.Categoria || r.categoria}</span> : "—"}</td>
+                  <td>{(r.MetodoEntrega || r.metodoentrega) || "—"}</td>
                 </tr>
               ))}
               {!rows.length && (

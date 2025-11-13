@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import "../css/Clientes.css";
-import CafeHeader from "../components/Header";
 import { api } from "../helper/api";
 import { FaSearch, FaSyncAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -87,8 +86,6 @@ export default function Ventas() {
 
   return (
     <div className="clientes-page">
-      <CafeHeader />
-
       <section className="clientes-hero">
         <div className="hero__copy">
           <h2>Ventas</h2>

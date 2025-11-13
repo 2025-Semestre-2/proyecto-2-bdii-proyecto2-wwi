@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "../css/Clientes.css";
 import "../css/ClienteDetalle.css";
-import CafeHeader from "../components/Header";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../helper/api";
 import { FaArrowLeft, FaReceipt, FaListUl, FaTruck } from "react-icons/fa";
@@ -53,7 +52,6 @@ export default function VentaDetalle() {
   if (loading) {
     return (
       <div className="clientes-page">
-        <CafeHeader />
         <p className="loading">Cargando...</p>
       </div>
     );
@@ -62,7 +60,6 @@ export default function VentaDetalle() {
   if (!data || !data.header) {
     return (
       <div className="clientes-page">
-        <CafeHeader />
         <section className="detail-wrap">
           <div className="detail-head">
             <button className="btn ghost" onClick={() => navigate("/ventas")}>
@@ -82,7 +79,6 @@ export default function VentaDetalle() {
 
   return (
     <div className="clientes-page">
-      <CafeHeader />
 
       <section className="detail-wrap">
         <div className="detail-head">

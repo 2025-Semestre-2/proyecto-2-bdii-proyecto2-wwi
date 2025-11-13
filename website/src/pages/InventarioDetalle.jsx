@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../helper/api";
 import "../css/Clientes.css";
 import "../css/ClienteDetalle.css";
-import CafeHeader from "../components/Header";
 import {
   FaArrowLeft,
   FaBoxOpen,
@@ -43,7 +42,6 @@ export default function InventarioDetalle() {
   if (loading)
     return (
       <div className="clientes-page">
-        <CafeHeader />
         <p className="loading">Cargando...</p>
       </div>
     );
@@ -51,7 +49,6 @@ export default function InventarioDetalle() {
   if (!data || !data.general)
     return (
       <div className="clientes-page">
-        <CafeHeader />
         <section className="detail-wrap">
           <div className="detail-head">
             <button className="btn ghost" onClick={() => navigate("/inventario")}>
@@ -70,7 +67,6 @@ export default function InventarioDetalle() {
 
   return (
     <div className="clientes-page">
-      <CafeHeader />
 
       <section className="detail-wrap">
         <div className="detail-head">

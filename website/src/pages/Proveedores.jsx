@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "../css/Clientes.css";
 import { api } from "../helper/api";
-import CafeHeader from "../components/Header";
 import { FaSearch, FaSyncAlt, FaTimesCircle } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
@@ -48,8 +47,6 @@ export default function Proveedores() {
 
   return (
     <div className="clientes-page">
-      <CafeHeader />
-
       <section className="clientes-hero">
         <div className="hero__copy">
           <h2>Proveedores</h2>
@@ -103,13 +100,13 @@ export default function Proveedores() {
             <tbody>
               {rows.map((r) => (
                 <tr
-                  key={r.supplierid}
+                  key={r.SupplierID || r.supplierid}
                   className="row"
-                  onClick={() => navigate(`/proveedores/${r.supplierid}`)}
+                  onClick={() => navigate(`/proveedores/${r.SupplierID || r.supplierid}`)}
                 >
-                  <td className="strong">{r.nombreproveedor ?? "—"}</td>
-                  <td>{r.categoria ? <span className="pill">{r.categoria}</span> : "—"}</td>
-                  <td>{r.metodoentrega ?? "—"}</td>
+                  <td className="strong">{(r.NombreProveedor || r.nombreproveedor) || "—"}</td>
+                  <td>{(r.Categoria || r.categoria) ? <span className="pill">{r.Categoria || r.categoria}</span> : "—"}</td>
+                  <td>{(r.MetodoEntrega || r.metodoentrega) || "—"}</td>
                 </tr>
               ))}
 

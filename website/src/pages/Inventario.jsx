@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "../css/Clientes.css";
-import CafeHeader from "../components/Header";
 import { api } from "../helper/api";
 import { FaSearch, FaSyncAlt, FaPlus, FaEdit, FaTrash, FaEye } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -259,8 +258,6 @@ export default function Inventario() {
 
   return (
     <div className="clientes-page">
-      <CafeHeader />
-
       <section className="clientes-hero">
         <div className="hero__copy">
           <h2>Inventario</h2>

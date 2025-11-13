@@ -37,16 +37,30 @@ router.get('/:id', async (req, res) => {
   }
 
   try {
+    console.log(`[DETALLE CLIENTE] Buscando cliente ${id} en sucursal ${req.sucursal}`);
+    
     // Obtener pool de la sucursal
     const pool = await getPool(req.sucursal);
+    
+    console.log(`[DETALLE CLIENTE] Pool obtenido, ejecutando sp_obtenerDetalleCliente...`);
     
     const result = await pool.request()
       .input('customerid', sql.Int, id)
       .execute('sp_obtenerDetalleCliente');
+    
+    console.log(`[DETALLE CLIENTE] Resultado recibido:`, {
+      recordsets: result.recordsets?.length || 0,
+      firstRecordset: result.recordsets?.[0]?.length || 0
+    });
 
-    const general = result.recordsets?.[0]?.[0] || null;
-    const contactos = result.recordsets?.[1] || [];
-    const metodos = result.recordsets?.[2] || [];
+    // Verificar si hay resultados
+    if (!result.recordsets || result.recordsets.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+
+    const general = result.recordsets[0]?.[0] || null;
+    const contactos = result.recordsets[1] || [];
+    const metodos = result.recordsets[2] || [];
 
     if (!general) {
       return res.status(404).json({ error: 'Cliente no encontrado' });
@@ -59,6 +73,7 @@ router.get('/:id', async (req, res) => {
     });
   } catch (error) {
     console.error(`Error en sp_obtenerDetalleCliente (${req.sucursal}):`, error);
+    console.error('Stack:', error.stack);
     res.status(500).json({ 
       error: 'Error consultando detalle de cliente',
       details: error.message 

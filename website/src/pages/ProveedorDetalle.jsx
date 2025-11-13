@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../helper/api";
 import "../css/Clientes.css";       
 import "../css/ClienteDetalle.css"; 
-import CafeHeader from "../components/Header";
 import { FaArrowLeft, FaPhoneAlt, FaGlobe, FaMapMarkerAlt, FaTruck, FaIdCard, FaUniversity } from "react-icons/fa";
 
 export default function ProveedorDetalle() {
@@ -30,7 +29,6 @@ export default function ProveedorDetalle() {
   if (loading) {
     return (
       <div className="clientes-page">
-        <CafeHeader />
         <p className="loading">Cargando...</p>
       </div>
     );
@@ -39,7 +37,6 @@ export default function ProveedorDetalle() {
   if (!data || !data.general) {
     return (
       <div className="clientes-page">
-        <CafeHeader />
         <p className="loading">Proveedor no encontrado</p>
       </div>
     );
@@ -53,7 +50,6 @@ export default function ProveedorDetalle() {
 
   return (
     <div className="clientes-page">
-      <CafeHeader />
 
       <section className="detail-wrap">
         <div className="detail-head">

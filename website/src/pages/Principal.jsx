@@ -1,5 +1,6 @@
 import "../css/Principal.css";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import logo from "../assets/logoT2.png";
 import { 
   FaChevronRight, 
@@ -10,7 +11,8 @@ import {
   FaBoxes 
 } from "react-icons/fa";
 
-const itemsMenu = [
+// Módulos para rol Administrador (Sucursales)
+const modulosAdministrador = [
   { 
     id: 1, 
     titulo: "Clientes", 
@@ -28,22 +30,6 @@ const itemsMenu = [
     descripcion: "Consultar los proveedores almacenados en la base de datos"
   },
   { 
-    id: 3, 
-    titulo: "Ventas", 
-    color: "#69503c",
-    icon: FaChartLine,
-    link: "/ventas",
-    descripcion: "Consultar las ventas registradas en la base de datos"
-  },
-  { 
-    id: 4, 
-    titulo: "Estadísticas", 
-    color: "#735945",
-    icon: FaChartBar,
-    link: "/estadisticas",
-    descripcion: "Consultar estadisticas de ventas, productos, clietes y proveedores"
-  },
-  { 
     id: 5, 
     titulo: "Inventario", 
     color: "#7e634e",
@@ -51,9 +37,35 @@ const itemsMenu = [
     link: "/inventario",
     descripcion: "Consultar los productos almacenados en la base de datos"
   },
+  { 
+    id: 3, 
+    titulo: "Ventas", 
+    color: "#69503c",
+    icon: FaChartLine,
+    link: "/ventas",
+    descripcion: "Consultar las ventas registradas en la base de datos"
+  }
 ];
 
-export default function Principal({ carreras = itemsMenu }) {
+// Módulos para rol Corporativo
+const modulosCorporativos = [
+  { 
+    id: 4, 
+    titulo: "Estadísticas", 
+    color: "#735945",
+    icon: FaChartBar,
+    link: "/estadisticas",
+    descripcion: "Consultar estadísticas de ventas, productos, clientes y proveedores"
+  }
+];
+
+export default function Principal() {
+  const { user } = useAuth();
+
+  // Determinar qué módulos mostrar según el rol
+  const rol = user?.rol?.toLowerCase();
+  const modulos = rol === 'corporativo' ? modulosCorporativos : modulosAdministrador;
+
   return (
     <section className="carreras-destacadas">
       <div className="brand-logo">
@@ -61,10 +73,18 @@ export default function Principal({ carreras = itemsMenu }) {
       </div>
       <div className="carreras-container">
         <h2 className="carreras-title">Wide World Importers</h2>
-        <p className="carreras-subtitle">Seleccione el módulo al que desea acceder</p>
+        <p className="carreras-subtitle">
+          Bienvenido, {user?.fullName || user?.username}
+        </p>
+        <p className="carreras-info">
+          {rol === 'corporativo' 
+            ? 'Oficina Corporativa - Módulo de Estadísticas'
+            : `${user?.sucursal && (user.sucursal.charAt(0).toUpperCase() + user.sucursal.slice(1).toLowerCase())} - Gestión Operativa`
+          }
+        </p>
 
         <div className="carreras-grid">
-          {carreras.map((c) => {
+          {modulos.map((c) => {
             const IconComponent = c.icon;
             return (
               <Link

@@ -76,15 +76,16 @@ app.post('/api/auth/login', async (req, res) => {
     // Obtener conexión a la BD de la sucursal
     const pool = await getPool(sucursalNormalizada);
     
-    // Ejecutar sp_ValidateLogin de esa sucursal
+    // Ejecutar sp_Login de esa sucursal
     const result = await pool.request()
-      .input('username', sql.NVarChar(100), username)
-      .input('password', sql.NVarChar(100), password)
+      .input('username', sql.NVarChar(50), username)
+      .input('password', sql.NVarChar(50), password)
       .execute('Application.sp_Login');
     
     const userData = result.recordset[0];
     
-    if (!userData || !userData.IsValid) {
+    // Si no hay datos, las credenciales son inválidas (el SP lanza error)
+    if (!userData) {
       return res.status(401).json({
         error: 'Credenciales inválidas',
         success: false
@@ -101,14 +102,14 @@ app.post('/api/auth/login', async (req, res) => {
         fullName: userData.FullName,
         rol: userData.Rol,
         sucursal: sucursalNormalizada,
-        active: userData.Active
-      },
+        active: true
+      }
       // En producción, aquí generarías un JWT token
       // token: generateJWT({ userId: userData.UserID, sucursal: sucursalNormalizada })
     });
     
   } catch (error) {
-    console.error(' Error en login:', error);
+    console.error('❌ Error en login:', error);
     return res.status(500).json({
       error: 'Error en el servidor al procesar login',
       details: error.message
@@ -134,7 +135,7 @@ app.get('/api/auth/sucursales', (req, res) => {
 // RUTAS DE RECURSOS (requieren sucursal)
 // ============================================================
 
-//  validar que existe sucursal en las rutas protegidas
+// Middleware para validar que existe sucursal en las rutas protegidas
 const requireSucursal = (req, res, next) => {
   if (!req.sucursal) {
     return res.status(400).json({
@@ -151,7 +152,7 @@ const requireSucursal = (req, res, next) => {
   next();
 };
 
-// Aplicar a las rutas de recursos
+// Aplicar middleware a las rutas de recursos
 app.use('/api/clientes', requireSucursal, clientesRoute);
 app.use('/api/proveedores', requireSucursal, proveedoresRoute);
 app.use('/api/inventario', requireSucursal, inventarioRoute);
