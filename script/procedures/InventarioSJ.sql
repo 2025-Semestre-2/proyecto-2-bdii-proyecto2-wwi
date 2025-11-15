@@ -251,12 +251,12 @@ BEGIN
     INSERT INTO Warehouse.StockItemHoldings_SJ
     (
         StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity,
-        LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy
+        LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen
     )
     VALUES
     (
         @ID, @CantidadDisponible, @Ubicacion, @CantidadDisponible,
-        @PrecioUnitario, 0, @CantidadDisponible, 1
+        @PrecioUnitario, 0, @CantidadDisponible, 1, SYSDATETIME()
     );
 
     -- Registrar transacción inicial si hay cantidad
@@ -265,12 +265,12 @@ BEGIN
         INSERT INTO Warehouse.StockItemTransactions_SJ
         (
             StockItemID, TransactionTypeID, CustomerID, InvoiceID, SupplierID,
-            PurchaseOrderID, TransactionOccurredWhen, Quantity, LastEditedBy
+            PurchaseOrderID, TransactionOccurredWhen, Quantity, LastEditedBy, LastEditedWhen
         )
         VALUES
         (
             @ID, 10, NULL, NULL, @SupplierID, NULL, SYSDATETIME(),
-            @CantidadDisponible, 1
+            @CantidadDisponible, 1, SYSDATETIME()
         );
     END
 
@@ -362,39 +362,57 @@ BEGIN
         SELECT @CantidadActual = QuantityOnHand 
         FROM Warehouse.StockItemHoldings_SJ 
         WHERE StockItemID = @StockItemID;
-        
+
+        -- Si no existe holdings, inicializar en cero
+        IF @CantidadActual IS NULL
+        BEGIN
+            INSERT INTO Warehouse.StockItemHoldings_SJ
+            (StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity, LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen)
+            VALUES (@StockItemID, 0, @Ubicacion, 0, 0, 0, 0, 1, SYSDATETIME());
+            SET @CantidadActual = 0;
+        END
+
         DECLARE @Diferencia INT = @CantidadDisponible - ISNULL(@CantidadActual, 0);
-        
+
         UPDATE Warehouse.StockItemHoldings_SJ
         SET 
             QuantityOnHand = @CantidadDisponible,
             BinLocation = @Ubicacion,
-            LastEditedBy = 1
+            LastEditedBy = 1,
+            LastEditedWhen = SYSDATETIME()
         WHERE StockItemID = @StockItemID;
-        
+
         -- Registrar transacción si hubo cambio en cantidad
         IF @Diferencia != 0
         BEGIN
             INSERT INTO Warehouse.StockItemTransactions_SJ
             (
                 StockItemID, TransactionTypeID, CustomerID, InvoiceID, SupplierID,
-                PurchaseOrderID, TransactionOccurredWhen, Quantity, LastEditedBy
+                PurchaseOrderID, TransactionOccurredWhen, Quantity, LastEditedBy, LastEditedWhen
             )
             VALUES
             (
                 @StockItemID, 
                 CASE WHEN @Diferencia > 0 THEN 10 ELSE 11 END,
                 NULL, NULL, @SupplierID, NULL, SYSDATETIME(),
-                @Diferencia, 1
+                @Diferencia, 1, SYSDATETIME()
             );
         END
     END
     ELSE
     BEGIN
+        -- Si no existe holdings, inicializar en cero
+        IF NOT EXISTS (SELECT 1 FROM Warehouse.StockItemHoldings_SJ WHERE StockItemID = @StockItemID)
+        BEGIN
+            INSERT INTO Warehouse.StockItemHoldings_SJ
+            (StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity, LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen)
+            VALUES (@StockItemID, 0, @Ubicacion, 0, 0, 0, 0, 1, SYSDATETIME());
+        END
         UPDATE Warehouse.StockItemHoldings_SJ
         SET 
             BinLocation = @Ubicacion,
-            LastEditedBy = 1
+            LastEditedBy = 1,
+            LastEditedWhen = SYSDATETIME()
         WHERE StockItemID = @StockItemID;
     END
 

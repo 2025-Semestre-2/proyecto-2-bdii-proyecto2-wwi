@@ -195,7 +195,9 @@ export default function Login() {
           >
             {loading ? (
               <>
-                <span className="spinner"></span>
+                <span className="spinner">
+                  <img src={logo} alt="Logo" style={{ width: 18, height: 18, borderRadius: '50%' }} />
+                </span>
                 Iniciando sesión...
               </>
             ) : (

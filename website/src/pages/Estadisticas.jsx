@@ -25,14 +25,12 @@ export default function Estadisticas() {
   // filtros
   const [supplier, setSupplier] = useState("");
   const [supCat, setSupCat] = useState("");
-
   const [customer, setCustomer] = useState("");
   const [cusCat, setCusCat] = useState("");
-
   const [year, setYear] = useState("");
-
   const [fy, setFy] = useState("");
   const [ty, setTy] = useState("");
+  const [sucursal, setSucursal] = useState("");
 
   // data
   const [rows, setRows] = useState([]);
@@ -45,15 +43,15 @@ export default function Estadisticas() {
     try {
       let data = [];
       if (which === TABS.COMPRAS) {
-        data = await api.compras(supplier.trim() || undefined, supCat.trim() || undefined);
+        data = await api.compras(supplier.trim() || undefined, supCat.trim() || undefined, sucursal || undefined);
       } else if (which === TABS.VENTAS) {
-        data = await api.ventas(customer.trim() || undefined, cusCat.trim() || undefined);
+        data = await api.ventas(customer.trim() || undefined, cusCat.trim() || undefined, sucursal || undefined);
       } else if (which === TABS.TOP_PRODUCTOS) {
-        data = await api.topProductos(year ? Number(year) : undefined);
+        data = await api.topProductos(year ? Number(year) : undefined, sucursal || undefined);
       } else if (which === TABS.TOP_CLIENTES) {
-        data = await api.topClientes(fy || undefined, ty || undefined);
+        data = await api.topClientes(fy || undefined, ty || undefined, sucursal || undefined);
       } else if (which === TABS.TOP_PROVEEDORES) {
-        data = await api.topProveedores(fy || undefined, ty || undefined);
+        data = await api.topProveedores(fy || undefined, ty || undefined, sucursal || undefined);
       }
       setRows(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -74,6 +72,7 @@ export default function Estadisticas() {
     setCustomer(""); setCusCat("");
     setYear("");
     setFy(""); setTy("");
+    setSucursal("");
     load(tab);
   };
 
@@ -84,6 +83,7 @@ export default function Estadisticas() {
           <tr>
             <th>Proveedor</th>
             <th>Categoría</th>
+            <th>Sucursal</th>
             <th className="right">Mínimo</th>
             <th className="right">Máximo</th>
             <th className="right">Promedio</th>
@@ -95,6 +95,7 @@ export default function Estadisticas() {
           <tr>
             <th>Cliente</th>
             <th>Categoría</th>
+            <th>Sucursal</th>
             <th className="right">Mínimo</th>
             <th className="right">Máximo</th>
             <th className="right">Promedio</th>
@@ -106,6 +107,7 @@ export default function Estadisticas() {
           <tr>
             <th className="right">Año</th>
             <th>Producto</th>
+            <th>Sucursal</th>
             <th className="right">Ventas</th>
             <th className="right">Costo</th>
             <th className="right">Ganancia</th>
@@ -117,6 +119,7 @@ export default function Estadisticas() {
           <tr>
             <th className="right">Año</th>
             <th>Cliente</th>
+            <th>Sucursal</th>
             <th className="right"># Facturas</th>
             <th className="right">Monto total</th>
             <th className="right">Rank</th>
@@ -127,6 +130,7 @@ export default function Estadisticas() {
           <tr>
             <th className="right">Año</th>
             <th>Proveedor</th>
+            <th>Sucursal</th>
             <th className="right"># Órdenes</th>
             <th className="right">Monto total</th>
             <th className="right">Rank</th>
@@ -144,6 +148,7 @@ export default function Estadisticas() {
           <tr key={i}>
             <td>{r.SupplierName ?? "—"}</td>
             <td>{r.SupplierCategoryName ?? (r.SupplierName ? "Subtotal" : "Total general")}</td>
+            <td>{r.Sucursal ?? "—"}</td>
             <td className="right">{fmt(r.monto_minimo)}</td>
             <td className="right">{fmt(r.monto_maximo)}</td>
             <td className="right">{fmt(r.monto_promedio)}</td>
@@ -155,6 +160,7 @@ export default function Estadisticas() {
           <tr key={i}>
             <td>{r.CustomerName ?? "—"}</td>
             <td>{r.StockGroupName ?? (r.CustomerName ? "Subtotal" : "Total general")}</td>
+            <td>{r.Sucursal ?? "—"}</td>
             <td className="right">{fmt(r.monto_minimo)}</td>
             <td className="right">{fmt(r.monto_maximo)}</td>
             <td className="right">{fmt(r.monto_promedio)}</td>
@@ -166,6 +172,7 @@ export default function Estadisticas() {
           <tr key={i}>
             <td className="right">{r.Year}</td>
             <td>{r.StockItemName}</td>
+            <td>{r.Sucursal ?? "—"}</td>
             <td className="right">{fmt(r.SalesAmount)}</td>
             <td className="right">{fmt(r.CostAmount)}</td>
             <td className="right strong">{fmt(r.ProfitAmount)}</td>
@@ -177,6 +184,7 @@ export default function Estadisticas() {
           <tr key={i}>
             <td className="right">{r.Year}</td>
             <td>{r.CustomerName}</td>
+            <td>{r.Sucursal ?? "—"}</td>
             <td className="right">{r.InvoiceCount}</td>
             <td className="right">{fmt(r.TotalAmount)}</td>
             <td className="right">{r.rnk}</td>
@@ -187,6 +195,7 @@ export default function Estadisticas() {
           <tr key={i}>
             <td className="right">{r.Year}</td>
             <td>{r.SupplierName}</td>
+            <td>{r.Sucursal ?? "—"}</td>
             <td className="right">{r.OrderCount}</td>
             <td className="right">{fmt(r.TotalAmount)}</td>
             <td className="right">{r.rnk}</td>
@@ -199,14 +208,12 @@ export default function Estadisticas() {
 
   return (
     <div className="estadisticas-page">
-      <CafeHeader />
-
+      {/* Solo un header */}
       <section className="est-hero">
         <div className="est-title">
           <FaChartBar />
           <h2>Estadísticas</h2>
         </div>
-
         {/* Tabs */}
         <div className="est-tabs">
           <button className={`est-tab ${tab===TABS.COMPRAS ? "active":""}`} onClick={()=>setTab(TABS.COMPRAS)}>Compras</button>
@@ -215,9 +222,15 @@ export default function Estadisticas() {
           <button className={`est-tab ${tab===TABS.TOP_CLIENTES ? "active":""}`} onClick={()=>setTab(TABS.TOP_CLIENTES)}>Top clientes</button>
           <button className={`est-tab ${tab===TABS.TOP_PROVEEDORES ? "active":""}`} onClick={()=>setTab(TABS.TOP_PROVEEDORES)}>Top proveedores</button>
         </div>
-
         {/* Filtros por tab */}
-        <div className="est-filters">
+        <section className="est-filters">
+          <div className="input-wrap">
+            <select value={sucursal} onChange={e => setSucursal(e.target.value)}>
+              <option value="">Consolidado</option>
+              <option value="San José">San José</option>
+              <option value="Limón">Limón</option>
+            </select>
+          </div>
           {tab===TABS.COMPRAS && (
             <>
               <div className="input-wrap">
@@ -238,7 +251,6 @@ export default function Estadisticas() {
               </div>
             </>
           )}
-
           {tab===TABS.VENTAS && (
             <>
               <div className="input-wrap">
@@ -259,7 +271,6 @@ export default function Estadisticas() {
               </div>
             </>
           )}
-
           {tab===TABS.TOP_PRODUCTOS && (
             <div className="input-wrap">
               <input
@@ -272,7 +283,6 @@ export default function Estadisticas() {
               />
             </div>
           )}
-
           {(tab===TABS.TOP_CLIENTES || tab===TABS.TOP_PROVEEDORES) && (
             <>
               <div className="input-wrap">
@@ -297,19 +307,16 @@ export default function Estadisticas() {
               </div>
             </>
           )}
-
           <button className="btn primary" onClick={load} disabled={loading}>
             {loading ? "Cargando..." : "Aplicar"}
           </button>
           <button className="btn ghost" onClick={clearAndReload}>
             <FaSyncAlt /> <span>Restaurar</span>
           </button>
-        </div>
+        </section>
       </section>
-
       <section className="card est-table">
         {!!err && <div className="alert">{err}</div>}
-
         <div className="table-wrap">
           <table>
             <thead>{renderTableHead()}</thead>
@@ -318,7 +325,7 @@ export default function Estadisticas() {
                 ? rows.map(renderTableRow)
                 : (
                   <tr>
-                    <td className="muted" colSpan={6}>{loading ? "Cargando..." : "Sin resultados"}</td>
+                    <td className="muted" colSpan={7}>{loading ? "Cargando..." : "Sin resultados"}</td>
                   </tr>
                 )}
             </tbody>

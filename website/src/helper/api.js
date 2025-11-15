@@ -172,9 +172,9 @@ export const api = {
   getFactura: (id) => http(`/ventas/${id}`),
 
   // Estadísticas
-  compras:        (supplier, category) => http(`/estadisticas/compras${qs({ supplier, category })}`),
-  ventas:         (customer, category) => http(`/estadisticas/ventas${qs({ customer, category })}`),
-  topProductos:   (year)               => http(`/estadisticas/top-productos${qs({ year })}`),
-  topClientes:    (fy, ty)             => http(`/estadisticas/top-clientes${qs({ fromyear: fy, toyear: ty })}`),
-  topProveedores: (fy, ty)             => http(`/estadisticas/top-proveedores${qs({ fromyear: fy, toyear: ty })}`),
+  compras:        (supplier, category, sucursal) => http(`/estadisticas/compras${qs({ supplier, category, sucursal })}`),
+  ventas:         (customer, category, sucursal) => http(`/estadisticas/ventas${qs({ customer, category, sucursal })}`),
+  topProductos:   (year, sucursal)               => http(`/estadisticas/top-productos${qs({ year, sucursal })}`),
+  topClientes:    (fy, ty, sucursal)             => http(`/estadisticas/top-clientes${qs({ fromyear: fy, toyear: ty, sucursal })}`),
+  topProveedores: (fy, ty, sucursal)             => http(`/estadisticas/top-proveedores${qs({ fromyear: fy, toyear: ty, sucursal })}`),
 };
