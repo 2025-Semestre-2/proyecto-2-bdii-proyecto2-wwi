@@ -219,10 +219,13 @@ CREATE OR ALTER PROCEDURE SP_InsertProduct
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    DECLARE @maxID INT;
+    DECLARE @maxID INT, @nextID INT;
     SELECT @maxID = MAX(StockItemID) FROM Warehouse.StockItems;
-    DBCC CHECKIDENT ('Warehouse.StockItems', RESEED, @maxID);
+    SELECT @nextID = IDENT_CURRENT('Warehouse.StockItems');
+    IF @nextID <= @maxID
+    BEGIN
+        DBCC CHECKIDENT ('Warehouse.StockItems', RESEED, @maxID);
+    END
     
     DECLARE @NewStockItemID TABLE (ID INT);
 
