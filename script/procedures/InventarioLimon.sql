@@ -219,6 +219,10 @@ CREATE OR ALTER PROCEDURE SP_InsertProduct
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    DECLARE @maxID INT;
+    SELECT @maxID = MAX(StockItemID) FROM Warehouse.StockItems;
+    DBCC CHECKIDENT ('Warehouse.StockItems', RESEED, @maxID);
     
     DECLARE @NewStockItemID TABLE (ID INT);
 
@@ -475,12 +479,12 @@ BEGIN
         INSERT INTO Warehouse.StockItemTransactions_Limon
         (
             StockItemID, TransactionTypeID, TransactionOccurredWhen,
-            Quantity, LastEditedBy
+            Quantity, LastEditedBy, LastEditedWhen
         )
         VALUES
         (
             @StockItemID, 11, SYSDATETIME(),
-            -@CantidadActual, 1
+            -@CantidadActual, 1, SYSDATETIME()
         );
     END
 
