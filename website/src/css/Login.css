@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: linear-gradient(135deg, #bfa382 0%, #6f4e37 100%);
+  background: linear-gradient(135deg, #0f0d0a 0%, #1a1410 50%, #211a15 100%);
   position: relative;
   overflow: hidden;
 }

@@ -27,6 +27,9 @@ function normalizarDetalleCliente(d) {
 }
 
 export default function Clientes() {
+    useEffect(() => {
+      load("");
+    }, []);
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [rawRows, setRawRows] = useState([]);
@@ -35,11 +38,12 @@ export default function Clientes() {
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
 
-  const load = async () => {
+  const load = async (filtro) => {
+    const value = typeof filtro === "string" ? filtro : search;
     setLoading(true);
     setErrMsg("");
     try {
-      const data = await api.getClientes(search.trim() || undefined);
+      const data = await api.getClientes(value.trim() || undefined);
       setRawRows(Array.isArray(data) ? data : (data?.rows || []));
     } catch (e) {
       console.error(e);
@@ -49,16 +53,10 @@ export default function Clientes() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  // Eliminar búsqueda automática al escribir. Solo el botón 'Aplicar' dispara la búsqueda.
 
-  const rows = useMemo(() => {
-    const tokens = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (!tokens.length) return rawRows;
-    return rawRows.filter(r => {
-      const haystack = `${r.nombrecliente ?? ""} ${r.categoria ?? ""} ${r.metodoentrega ?? ""}`.toLowerCase();
-      return tokens.every(t => haystack.includes(t));
-    });
-  }, [rawRows, search]);
+  // Mostrar los datos tal como vienen del backend
+  const rows = rawRows;
 
   const openDetail = async (row) => {
     setSelectedId(row.customerid);
@@ -88,7 +86,7 @@ export default function Clientes() {
     setSearch("");
     setSelectedId(null);
     setDetail(null);
-    load();
+    load("");
   };
 
   return (

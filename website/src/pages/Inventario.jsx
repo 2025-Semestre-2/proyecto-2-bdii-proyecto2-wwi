@@ -5,6 +5,9 @@ import { FaSearch, FaSyncAlt, FaPlus, FaEdit, FaTrash, FaEye } from "react-icons
 import { useNavigate } from "react-router-dom";
 
 export default function Inventario() {
+    useEffect(() => {
+      load("");
+    }, []);
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
@@ -45,11 +48,12 @@ export default function Inventario() {
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const load = async () => {
+  const load = async (filtro) => {
+    const value = typeof filtro === "string" ? filtro : search;
     setLoading(true);
     setErrMsg("");
     try {
-      const data = await api.getInventario(search.trim() || undefined, undefined);
+      const data = await api.getInventario(value.trim() || undefined, undefined);
       setRawRows(Array.isArray(data) ? data : (data?.rows || []));
     } catch (e) {
       console.error(e);
@@ -83,14 +87,8 @@ export default function Inventario() {
     loadReferenceData();
   }, []);
 
-  const rows = useMemo(() => {
-    const tokens = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (!tokens.length) return rawRows;
-    return rawRows.filter((r) => {
-      const hay = `${r.nombreproducto ?? ""} ${r.grupo ?? ""}`.toLowerCase();
-      return tokens.every((t) => hay.includes(t));
-    });
-  }, [rawRows, search]);
+  // Mostrar los datos tal como vienen del backend
+  const rows = rawRows;
 
   const onRestore = () => {
     setSearch("");

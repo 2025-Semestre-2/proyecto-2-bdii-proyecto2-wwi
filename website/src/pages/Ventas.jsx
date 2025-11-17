@@ -16,16 +16,14 @@ export default function Ventas() {
   const [to, setTo] = useState("");
   const [min, setMin] = useState("");
   const [max, setMax] = useState("");
-
-  const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
   const [total, setTotal] = useState(0);
-
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [page, setPage] = useState(1);
 
-  const load = async (_page = page, _limit = limit) => {
+  const load = async (_page = 1, _limit = limit) => {
     setLoading(true);
     setErr("");
     try {
@@ -50,24 +48,31 @@ export default function Ventas() {
     }
   };
 
+  // Carga inicial solo al montar
   useEffect(() => {
     load(1, limit);
   }, []);
 
-  useEffect(() => {
+  // Cambiar página solo al hacer clic en paginador
+  const goToPage = (newPage) => {
+    setPage(newPage);
+    load(newPage, limit);
+  };
+
+  // Cambiar límite solo al seleccionar en el select
+  const changeLimit = (newLimit) => {
+    setLimit(newLimit);
     setPage(1);
-    load(1, limit);
-  }, [limit]);
+    load(1, newLimit);
+  };
 
-  useEffect(() => {
-    load(page, limit);
-  }, [page]);
-
+  // Aplicar filtros solo al dar clic en 'Aplicar' o Enter
   const applyFilters = () => {
     setPage(1);
     load(1, limit);
   };
 
+  // Restaurar filtros y recargar todo
   const restore = () => {
     setClient("");
     setFrom("");

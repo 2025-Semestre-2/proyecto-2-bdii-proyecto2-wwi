@@ -20,12 +20,16 @@ const fmt = (n) => {
 };
 
 export default function Estadisticas() {
+    useEffect(() => {
+      load();
+    }, []);
   const [tab, setTab] = useState(TABS.COMPRAS);
 
   // filtros
   const [supplier, setSupplier] = useState("");
-  const [supCat, setSupCat] = useState("");
-  const [customer, setCustomer] = useState("");
+    // Removed automatic filtering and frontend filtering
+    // useEffect(() => { load(TABS.COMPRAS); }, []);
+    // useEffect(() => { load(tab); }, [tab]);
   const [cusCat, setCusCat] = useState("");
   const [year, setYear] = useState("");
   const [fy, setFy] = useState("");
@@ -37,43 +41,66 @@ export default function Estadisticas() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  const load = async (which = tab) => {
+  const load = async (
+    which = tab,
+    filtro = {
+      supplier,
+      supCat,
+      customer,
+      cusCat,
+      year,
+      fy,
+      ty,
+      sucursal,
+    }
+  ) => {
     setLoading(true);
     setErr("");
     try {
       let data = [];
       if (which === TABS.COMPRAS) {
-        data = await api.compras(supplier.trim() || undefined, supCat.trim() || undefined, sucursal || undefined);
+        data = await api.compras(filtro.supplier.trim() || undefined, filtro.supCat.trim() || undefined, filtro.sucursal || undefined);
       } else if (which === TABS.VENTAS) {
-        data = await api.ventas(customer.trim() || undefined, cusCat.trim() || undefined, sucursal || undefined);
+        data = await api.ventas(filtro.customer.trim() || undefined, filtro.cusCat.trim() || undefined, filtro.sucursal || undefined);
       } else if (which === TABS.TOP_PRODUCTOS) {
-        data = await api.topProductos(year ? Number(year) : undefined, sucursal || undefined);
+        data = await api.topProductos(filtro.year ? Number(filtro.year) : undefined, filtro.sucursal || undefined);
       } else if (which === TABS.TOP_CLIENTES) {
-        data = await api.topClientes(fy || undefined, ty || undefined, sucursal || undefined);
+        data = await api.topClientes(filtro.fy || undefined, filtro.ty || undefined, filtro.sucursal || undefined);
       } else if (which === TABS.TOP_PROVEEDORES) {
-        data = await api.topProveedores(fy || undefined, ty || undefined, sucursal || undefined);
+        data = await api.topProveedores(filtro.fy || undefined, filtro.ty || undefined, filtro.sucursal || undefined);
       }
       setRows(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
       setRows([]);
-      setErr("No se pudieron cargar las estadísticas.");
+      setErr("No se pudieron cargar las estaddsticas.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { load(TABS.COMPRAS); }, []);
-  
   useEffect(() => { load(tab); }, [tab]);
 
   const clearAndReload = () => {
-    setSupplier(""); setSupCat("");
-    setCustomer(""); setCusCat("");
+    setSupplier("");
+    setSupCat("");
+    setCustomer("");
+    setCusCat("");
     setYear("");
-    setFy(""); setTy("");
+    setFy("");
+    setTy("");
     setSucursal("");
-    load(tab);
+    load(tab, {
+      supplier: "",
+      supCat: "",
+      customer: "",
+      cusCat: "",
+      year: "",
+      fy: "",
+      ty: "",
+      sucursal: "",
+    });
   };
 
   const renderTableHead = () => {

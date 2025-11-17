@@ -6,20 +6,33 @@
 }
 
 html, body, #root {
-  height: 100%;
-  width: 100%;
+  min-height: 100vh;
+  min-width: 100vw;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden !important;
+  background: #211a15 !important;
 }
 
 .carreras-destacadas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   min-height: 100vh;
-  width: 100%;
+  min-width: 100vw;
+  height: 100vh;
+  width: 100vw;
   background: linear-gradient(135deg, #0f0d0a 0%, #1a1410 50%, #211a15 100%);
-  padding: 40px 20px;
+  padding: 0;
+  margin: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow-x: hidden;
-  position: relative;
+  overflow: hidden !important;
+  position: fixed;
+  z-index: 0;
 }
 
 .carreras-destacadas::before {
@@ -55,7 +68,6 @@ html, body, #root {
 }
 
 .carreras-container {
-  max-width: 1600px;
   width: 100%;
   height: 100%;
   display: flex;
@@ -351,31 +363,40 @@ html, body, #root {
 
 @media (max-width: 768px) {
   .carreras-destacadas {
-    padding: 30px 15px;
+    min-width: 100%;
+    width: 100%;
+    min-height: 100vh;
+    height: 100vh;
+    padding: 20px 0 0 0;
+    align-items: flex-start;
+    overflow: hidden;
   }
-
+  .carreras-container {
+    width: 100%;
+    height: 100%;
+  }
   .carreras-grid {
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 20px;
+    padding-bottom: 20px;
   }
-
   .cflip-card {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
     height: 320px;
   }
-
   .carreras-title {
     font-size: 2.5rem;
   }
-
   .carreras-subtitle {
     font-size: 1.2rem;
     margin-bottom: 35px;
   }
-
   .cflip-title {
     font-size: 1.4rem;
   }
-
   .cflip-back-title {
     font-size: 1.7rem;
   }
