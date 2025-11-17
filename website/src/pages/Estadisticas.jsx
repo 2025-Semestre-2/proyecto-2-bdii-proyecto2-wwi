@@ -20,16 +20,12 @@ const fmt = (n) => {
 };
 
 export default function Estadisticas() {
-    useEffect(() => {
-      load();
-    }, []);
   const [tab, setTab] = useState(TABS.COMPRAS);
 
   // filtros
   const [supplier, setSupplier] = useState("");
-    // Removed automatic filtering and frontend filtering
-    // useEffect(() => { load(TABS.COMPRAS); }, []);
-    // useEffect(() => { load(tab); }, [tab]);
+  const [supCat, setSupCat] = useState("");
+  const [customer, setCustomer] = useState("");
   const [cusCat, setCusCat] = useState("");
   const [year, setYear] = useState("");
   const [fy, setFy] = useState("");
