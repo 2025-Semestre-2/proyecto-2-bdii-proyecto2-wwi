@@ -105,7 +105,7 @@ async function getPool(sucursal) {
   try {
     await pool.connect();
     pools[sucursalNormalizada] = pool;
-    console.log(`✅ Conectado a ${sucursalNormalizada.toUpperCase()} (${configs[sucursalNormalizada].database})`);
+    console.log(` Conectado a ${sucursalNormalizada.toUpperCase()} (${configs[sucursalNormalizada].database})`);
     return pool;
   } catch (error) {
     console.error(` Error conectando a ${sucursalNormalizada}:`, error.message);

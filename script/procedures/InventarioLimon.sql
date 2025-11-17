@@ -559,7 +559,7 @@ BEGIN
 END
 GO
 
-PRINT '✅ Stored Procedures de Inventario creados para LIMÓN';
+PRINT ' Stored Procedures de Inventario creados para LIMÓN';
 PRINT '';
 PRINT 'Procedures disponibles:';
 PRINT '  • sp_obtenerInventario - Lista de productos con existencias';

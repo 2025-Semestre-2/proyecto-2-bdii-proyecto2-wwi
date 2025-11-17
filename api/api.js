@@ -27,7 +27,7 @@ app.use((req, res, next) => {
 // ============================================================
 //Extraer sucursal del header o token
 // ============================================================
-// Este middleware agrega req.sucursal para que las rutas sepan a qué BD conectar
+// Este  agrega req.sucursal para que las rutas sepan a qué BD conectar
 app.use((req, res, next) => {
   // La sucursal puede venir de:
   // 1. Header personalizado X-Sucursal
@@ -109,7 +109,7 @@ app.post('/api/auth/login', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Error en login:', error);
+    console.error(' Error en login:', error);
     return res.status(500).json({
       error: 'Error en el servidor al procesar login',
       details: error.message
@@ -135,7 +135,7 @@ app.get('/api/auth/sucursales', (req, res) => {
 // RUTAS DE RECURSOS (requieren sucursal)
 // ============================================================
 
-// Middleware para validar que existe sucursal en las rutas protegidas
+//  para validar que existe sucursal en las rutas protegidas
 const requireSucursal = (req, res, next) => {
   if (!req.sucursal) {
     return res.status(400).json({
@@ -152,7 +152,7 @@ const requireSucursal = (req, res, next) => {
   next();
 };
 
-// Aplicar middleware a las rutas de recursos
+// Aplicar  a las rutas de recursos
 app.use('/api/clientes', requireSucursal, clientesRoute);
 app.use('/api/proveedores', requireSucursal, proveedoresRoute);
 app.use('/api/inventario', requireSucursal, inventarioRoute);
@@ -218,11 +218,11 @@ app.get('/health', async (req, res) => {
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('');
-  console.log('🚀 ============================================');
+  console.log(' ============================================');
   console.log(`   API WideWorldImporters Multi-Sucursal`);
-  console.log('🚀 ============================================');
-  console.log(`   📡 Servidor: http://localhost:${PORT}`);
-  console.log(`   🌐 Red LAN:  http://${WSL_HOST}:${PORT}`);
+  console.log(' ============================================');
+  console.log(`    Servidor: http://localhost:${PORT}`);
+  console.log(`    Red LAN:  http://${WSL_HOST}:${PORT}`);
   console.log('');
   console.log('   Sucursales disponibles:');
   console.log('   • San José (puerto 1437)');
@@ -239,19 +239,19 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 
 // Cerrar conexiones al terminar
 process.on('SIGTERM', async () => {
-  console.log('⚠️  SIGTERM recibido, cerrando conexiones...');
+  console.log('  SIGTERM recibido, cerrando conexiones...');
   await closeAllPools();
   server.close(() => {
-    console.log('✅ Servidor cerrado');
+    console.log(' Servidor cerrado');
     process.exit(0);
   });
 });
 
 process.on('SIGINT', async () => {
-  console.log('\n⚠️  SIGINT recibido, cerrando conexiones...');
+  console.log('\n  SIGINT recibido, cerrando conexiones...');
   await closeAllPools();
   server.close(() => {
-    console.log('✅ Servidor cerrado');
+    console.log(' Servidor cerrado');
     process.exit(0);
   });
 });
