@@ -16,46 +16,46 @@ CREATE OR ALTER PROCEDURE sp_obtenerInventario
   @group  NVARCHAR(100) = NULL    
 AS
 BEGIN
-  SET NOCOUNT ON;
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+    SELECT
+        si.StockItemID                   AS stockitemid,
+        si.StockItemName                 AS nombreproducto,
 
-  SELECT
-      si.StockItemID                   AS stockitemid,
-      si.StockItemName                 AS nombreproducto,
-
-      (
-        SELECT TOP (1) sg2.StockGroupName
-        FROM Warehouse.StockItemStockGroups m2
-        JOIN Warehouse.StockGroups sg2 ON sg2.StockGroupID = m2.StockGroupID
-        WHERE m2.StockItemID = si.StockItemID
-        ORDER BY sg2.StockGroupName
-      )                                 AS grupo,
-      wh.QuantityOnHand                 AS cantidad
-  FROM Warehouse.StockItems si
-  LEFT JOIN Warehouse.StockItemHoldings_SJ wh
-         ON wh.StockItemID = si.StockItemID
-  WHERE
-      (
-        @search IS NULL
-        OR si.StockItemName LIKE '%' + @search + '%'
-        OR EXISTS (
-             SELECT 1
-             FROM Warehouse.StockItemStockGroups m
-             JOIN Warehouse.StockGroups sg ON sg.StockGroupID = m.StockGroupID
-             WHERE m.StockItemID = si.StockItemID
-               AND sg.StockGroupName LIKE '%' + @search + '%'
-           )
-      )
-      AND (
-        @group IS NULL
-        OR EXISTS (
-             SELECT 1
-             FROM Warehouse.StockItemStockGroups m3
-             JOIN Warehouse.StockGroups sg3 ON sg3.StockGroupID = m3.StockGroupID
-             WHERE m3.StockItemID = si.StockItemID
-               AND sg3.StockGroupName LIKE '%' + @group + '%'
-           )
-      )
-  ORDER BY si.StockItemName ASC;
+        (
+            SELECT TOP (1) sg2.StockGroupName
+            FROM Warehouse.StockItemStockGroups m2
+            JOIN Warehouse.StockGroups sg2 ON sg2.StockGroupID = m2.StockGroupID
+            WHERE m2.StockItemID = si.StockItemID
+            ORDER BY sg2.StockGroupName
+        )                                 AS grupo,
+        wh.QuantityOnHand                 AS cantidad
+    FROM Warehouse.StockItems si
+    LEFT JOIN Warehouse.StockItemHoldings_SJ wh
+            ON wh.StockItemID = si.StockItemID
+    WHERE
+        (
+            @search IS NULL
+            OR si.StockItemName LIKE '%' + @search + '%'
+            OR EXISTS (
+                SELECT 1
+                FROM Warehouse.StockItemStockGroups m
+                JOIN Warehouse.StockGroups sg ON sg.StockGroupID = m.StockGroupID
+                WHERE m.StockItemID = si.StockItemID
+                AND sg.StockGroupName LIKE '%' + @search + '%'
+            )
+        )
+        AND (
+            @group IS NULL
+            OR EXISTS (
+                SELECT 1
+                FROM Warehouse.StockItemStockGroups m3
+                JOIN Warehouse.StockGroups sg3 ON sg3.StockGroupID = m3.StockGroupID
+                WHERE m3.StockItemID = si.StockItemID
+                AND sg3.StockGroupName LIKE '%' + @group + '%'
+            )
+        )
+    ORDER BY si.StockItemName ASC;
 END;
 GO
 
@@ -66,50 +66,50 @@ CREATE OR ALTER PROCEDURE sp_obtenerDetalleInventario
   @stockitemid INT
 AS
 BEGIN
-  SET NOCOUNT ON;
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+    -- Información general del producto
+    SELECT
+        si.StockItemID,
+        si.StockItemName,
+        si.SupplierID,
+        si.Brand,
+        si.Size,
+        si.ColorID,
+        col.ColorName,
+        si.UnitPackageID,
+        up.PackageTypeName  AS UnitPackage,
+        si.OuterPackageID,
+        op.PackageTypeName  AS OuterPackage,
+        si.QuantityPerOuter,
+        si.UnitPrice,
+        si.RecommendedRetailPrice,
+        si.TaxRate,
+        si.TypicalWeightPerUnit,
+        si.LeadTimeDays,
+        si.IsChillerStock,
+        si.Barcode,
+        si.SearchDetails
+    FROM Warehouse.StockItems si
+    LEFT JOIN Warehouse.Colors      col ON col.ColorID       = si.ColorID
+    LEFT JOIN Warehouse.PackageTypes up  ON up.PackageTypeID  = si.UnitPackageID
+    LEFT JOIN Warehouse.PackageTypes op  ON op.PackageTypeID  = si.OuterPackageID
+    WHERE si.StockItemID = @stockitemid;
 
-  -- Información general del producto
-  SELECT
-      si.StockItemID,
-      si.StockItemName,
-      si.SupplierID,
-      si.Brand,
-      si.Size,
-      si.ColorID,
-      col.ColorName,
-      si.UnitPackageID,
-      up.PackageTypeName  AS UnitPackage,
-      si.OuterPackageID,
-      op.PackageTypeName  AS OuterPackage,
-      si.QuantityPerOuter,
-      si.UnitPrice,
-      si.RecommendedRetailPrice,
-      si.TaxRate,
-      si.TypicalWeightPerUnit,
-      si.LeadTimeDays,
-      si.IsChillerStock,
-      si.Barcode,
-      si.SearchDetails
-  FROM Warehouse.StockItems si
-  LEFT JOIN Warehouse.Colors      col ON col.ColorID       = si.ColorID
-  LEFT JOIN Warehouse.PackageTypes up  ON up.PackageTypeID  = si.UnitPackageID
-  LEFT JOIN Warehouse.PackageTypes op  ON op.PackageTypeID  = si.OuterPackageID
-  WHERE si.StockItemID = @stockitemid;
+    -- Holdings (inventario de San José)
+    SELECT
+        wh.QuantityOnHand,
+        wh.BinLocation
+    FROM Warehouse.StockItemHoldings_SJ wh
+    WHERE wh.StockItemID = @stockitemid;
 
-  -- Holdings (inventario de San José)
-  SELECT
-      wh.QuantityOnHand,
-      wh.BinLocation
-  FROM Warehouse.StockItemHoldings_SJ wh
-  WHERE wh.StockItemID = @stockitemid;
-
-  -- Proveedor (desde la tabla StockItems directamente)
-  SELECT
-      s.SupplierID,
-      s.SupplierName
-  FROM Warehouse.StockItems si
-  INNER JOIN Purchasing.Suppliers s ON s.SupplierID = si.SupplierID
-  WHERE si.StockItemID = @stockitemid;
+    -- Proveedor (desde la tabla StockItems directamente)
+    SELECT
+        s.SupplierID,
+        s.SupplierName
+    FROM Warehouse.StockItems si
+    INNER JOIN Purchasing.Suppliers s ON s.SupplierID = si.SupplierID
+    WHERE si.StockItemID = @stockitemid;
 END;
 GO
 
@@ -219,92 +219,96 @@ CREATE OR ALTER PROCEDURE SP_InsertProduct
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @maxID INT, @nextID INT;
-    SELECT @maxID = MAX(StockItemID) FROM Warehouse.StockItems;
-    SELECT @nextID = IDENT_CURRENT('Warehouse.StockItems');
-    IF @nextID <= @maxID
-    BEGIN
-        DBCC CHECKIDENT ('Warehouse.StockItems', RESEED, @maxID);
-    END
-    
-    DECLARE @NewStockItemID TABLE (ID INT);
+    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+    BEGIN TRANSACTION;
 
-    -- Insertar en StockItems (tabla compartida - se replicará)
-    INSERT INTO Warehouse.StockItems
-    (
-        StockItemName, SupplierID, ColorID, UnitPackageID, OuterPackageID,
-        Brand, Size, LeadTimeDays, QuantityPerOuter, IsChillerStock,
-        Barcode, TaxRate, UnitPrice, RecommendedRetailPrice, TypicalWeightPerUnit,
-        MarketingComments, InternalComments, Photo, CustomFields, LastEditedBy
-    )
-    OUTPUT INSERTED.StockItemID INTO @NewStockItemID
-    VALUES
-    (
-        @NombreProducto, @SupplierID, @ColorID, @UnitPackageID, @OuterPackageID,
-        @Marca, @Talla, @TiempoEntrega, @CantidadEmpaquetamiento, @RequiereFrio,
-        @CodigoBarras, @Impuesto, @PrecioUnitario, @PrecioVenta, @Peso,
-        NULL, NULL, NULL, @CamposPersonalizados, 1
-    );
+        DECLARE @maxID INT, @nextID INT;
+        SELECT @maxID = MAX(StockItemID) FROM Warehouse.StockItems;
+        SELECT @nextID = IDENT_CURRENT('Warehouse.StockItems');
+        IF @nextID <= @maxID
+        BEGIN
+            DBCC CHECKIDENT ('Warehouse.StockItems', RESEED, @maxID);
+        END
+        
+        DECLARE @NewStockItemID TABLE (ID INT);
 
-    DECLARE @ID INT = (SELECT ID FROM @NewStockItemID);
-
-    IF @ID IS NULL OR @ID = 0
-    BEGIN
-        RAISERROR('Error: No se pudo obtener el ID del nuevo producto', 16, 1);
-        RETURN;
-    END;
-
-    -- Insertar en Holdings de San José
-    INSERT INTO Warehouse.StockItemHoldings_SJ
-    (
-        StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity,
-        LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen
-    )
-    VALUES
-    (
-        @ID, @CantidadDisponible, @Ubicacion, @CantidadDisponible,
-        @PrecioUnitario, 0, @CantidadDisponible, 1, SYSDATETIME()
-    );
-
-    -- Registrar transacción inicial si hay cantidad
-    IF @CantidadDisponible > 0
-    BEGIN
-        INSERT INTO Warehouse.StockItemTransactions_SJ
+        -- Insertar en StockItems (tabla compartida - se replicará)
+        INSERT INTO Warehouse.StockItems
         (
-            StockItemID, TransactionTypeID, CustomerID, InvoiceID, SupplierID,
-            PurchaseOrderID, TransactionOccurredWhen, Quantity, LastEditedBy, LastEditedWhen
+            StockItemName, SupplierID, ColorID, UnitPackageID, OuterPackageID,
+            Brand, Size, LeadTimeDays, QuantityPerOuter, IsChillerStock,
+            Barcode, TaxRate, UnitPrice, RecommendedRetailPrice, TypicalWeightPerUnit,
+            MarketingComments, InternalComments, Photo, CustomFields, LastEditedBy
+        )
+        OUTPUT INSERTED.StockItemID INTO @NewStockItemID
+        VALUES
+        (
+            @NombreProducto, @SupplierID, @ColorID, @UnitPackageID, @OuterPackageID,
+            @Marca, @Talla, @TiempoEntrega, @CantidadEmpaquetamiento, @RequiereFrio,
+            @CodigoBarras, @Impuesto, @PrecioUnitario, @PrecioVenta, @Peso,
+            NULL, NULL, NULL, @CamposPersonalizados, 1
+        );
+
+        DECLARE @ID INT = (SELECT ID FROM @NewStockItemID);
+
+        IF @ID IS NULL OR @ID = 0
+        BEGIN
+            RAISERROR('Error: No se pudo obtener el ID del nuevo producto', 16, 1);
+            RETURN;
+        END;
+
+        -- Insertar en Holdings de San José
+        INSERT INTO Warehouse.StockItemHoldings_SJ
+        (
+            StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity,
+            LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen
         )
         VALUES
         (
-            @ID, 10, NULL, NULL, @SupplierID, NULL, SYSDATETIME(),
-            @CantidadDisponible, 1, SYSDATETIME()
+            @ID, @CantidadDisponible, @Ubicacion, @CantidadDisponible,
+            @PrecioUnitario, 0, @CantidadDisponible, 1, SYSDATETIME()
         );
-    END
 
-    -- Insertar grupos de stock si se especificaron
-    IF @StockGroupIDs IS NOT NULL AND @StockGroupIDs != ''
-    BEGIN
-        DECLARE @GroupID INT;
-        DECLARE @Pos INT = 1;
-        DECLARE @NextPos INT;
-        
-        WHILE @Pos <= LEN(@StockGroupIDs)
+        -- Registrar transacción inicial si hay cantidad
+        IF @CantidadDisponible > 0
         BEGIN
-            SET @NextPos = CHARINDEX(',', @StockGroupIDs, @Pos);
-            IF @NextPos = 0
-                SET @NextPos = LEN(@StockGroupIDs) + 1;
-            
-            SET @GroupID = CAST(SUBSTRING(@StockGroupIDs, @Pos, @NextPos - @Pos) AS INT);
-            
-            INSERT INTO Warehouse.StockItemStockGroups
-            (StockItemID, StockGroupID, LastEditedBy)
-            VALUES (@ID, @GroupID, 1);
-            
-            SET @Pos = @NextPos + 1;
+            INSERT INTO Warehouse.StockItemTransactions_SJ
+            (
+                StockItemID, TransactionTypeID, CustomerID, InvoiceID, SupplierID,
+                PurchaseOrderID, TransactionOccurredWhen, Quantity, LastEditedBy, LastEditedWhen
+            )
+            VALUES
+            (
+                @ID, 10, NULL, NULL, @SupplierID, NULL, SYSDATETIME(),
+                @CantidadDisponible, 1, SYSDATETIME()
+            );
         END
-    END
 
-    SELECT @ID AS NewStockItemID;
+        -- Insertar grupos de stock si se especificaron
+        IF @StockGroupIDs IS NOT NULL AND @StockGroupIDs != ''
+        BEGIN
+            DECLARE @GroupID INT;
+            DECLARE @Pos INT = 1;
+            DECLARE @NextPos INT;
+            
+            WHILE @Pos <= LEN(@StockGroupIDs)
+            BEGIN
+                SET @NextPos = CHARINDEX(',', @StockGroupIDs, @Pos);
+                IF @NextPos = 0
+                    SET @NextPos = LEN(@StockGroupIDs) + 1;
+                
+                SET @GroupID = CAST(SUBSTRING(@StockGroupIDs, @Pos, @NextPos - @Pos) AS INT);
+                
+                INSERT INTO Warehouse.StockItemStockGroups
+                (StockItemID, StockGroupID, LastEditedBy)
+                VALUES (@ID, @GroupID, 1);
+                
+                SET @Pos = @NextPos + 1;
+            END
+        END
+
+        SELECT @ID AS NewStockItemID;
+    COMMIT TRANSACTION;
 END
 GO
 
@@ -339,120 +343,122 @@ CREATE OR ALTER PROCEDURE SP_UpdateProduct
 AS
 BEGIN
     SET NOCOUNT ON;
-    
-    -- Actualizar información del producto (tabla compartida)
-    UPDATE Warehouse.StockItems
-    SET 
-        StockItemName = @NombreProducto,
-        SupplierID = @SupplierID,
-        ColorID = @ColorID,
-        UnitPackageID = @UnitPackageID,
-        OuterPackageID = @OuterPackageID,
-        Brand = @Marca,
-        Size = @Talla,
-        LeadTimeDays = @TiempoEntrega,
-        QuantityPerOuter = @CantidadEmpaquetamiento,
-        IsChillerStock = @RequiereFrio,
-        Barcode = @CodigoBarras,
-        TaxRate = @Impuesto,
-        UnitPrice = @PrecioUnitario,
-        RecommendedRetailPrice = @PrecioVenta,
-        TypicalWeightPerUnit = @Peso,
-        CustomFields = @CamposPersonalizados,
-        LastEditedBy = 1
-    WHERE StockItemID = @StockItemID;
-
-    -- Actualizar cantidad en Holdings de San José
-    IF @CantidadDisponible IS NOT NULL
-    BEGIN
-        DECLARE @CantidadActual INT;
-        SELECT @CantidadActual = QuantityOnHand 
-        FROM Warehouse.StockItemHoldings_SJ 
-        WHERE StockItemID = @StockItemID;
-
-        -- Si no existe holdings, inicializar en cero
-        IF @CantidadActual IS NULL
-        BEGIN
-            INSERT INTO Warehouse.StockItemHoldings_SJ
-            (StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity, LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen)
-            VALUES (@StockItemID, 0, @Ubicacion, 0, 0, 0, 0, 1, SYSDATETIME());
-            SET @CantidadActual = 0;
-        END
-
-        DECLARE @Diferencia INT = @CantidadDisponible - ISNULL(@CantidadActual, 0);
-
-        UPDATE Warehouse.StockItemHoldings_SJ
+    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+    BEGIN TRANSACTION;
+        -- Actualizar información del producto (tabla compartida)
+        UPDATE Warehouse.StockItems
         SET 
-            QuantityOnHand = @CantidadDisponible,
-            BinLocation = @Ubicacion,
-            LastEditedBy = 1,
-            LastEditedWhen = SYSDATETIME()
+            StockItemName = @NombreProducto,
+            SupplierID = @SupplierID,
+            ColorID = @ColorID,
+            UnitPackageID = @UnitPackageID,
+            OuterPackageID = @OuterPackageID,
+            Brand = @Marca,
+            Size = @Talla,
+            LeadTimeDays = @TiempoEntrega,
+            QuantityPerOuter = @CantidadEmpaquetamiento,
+            IsChillerStock = @RequiereFrio,
+            Barcode = @CodigoBarras,
+            TaxRate = @Impuesto,
+            UnitPrice = @PrecioUnitario,
+            RecommendedRetailPrice = @PrecioVenta,
+            TypicalWeightPerUnit = @Peso,
+            CustomFields = @CamposPersonalizados,
+            LastEditedBy = 1
         WHERE StockItemID = @StockItemID;
 
-        -- Registrar transacción si hubo cambio en cantidad
-        IF @Diferencia != 0
+        -- Actualizar cantidad en Holdings de San José
+        IF @CantidadDisponible IS NOT NULL
         BEGIN
-            INSERT INTO Warehouse.StockItemTransactions_SJ
-            (
-                StockItemID, TransactionTypeID, CustomerID, InvoiceID, SupplierID,
-                PurchaseOrderID, TransactionOccurredWhen, Quantity, LastEditedBy, LastEditedWhen
-            )
-            VALUES
-            (
-                @StockItemID, 
-                CASE WHEN @Diferencia > 0 THEN 10 ELSE 11 END,
-                NULL, NULL, @SupplierID, NULL, SYSDATETIME(),
-                @Diferencia, 1, SYSDATETIME()
-            );
-        END
-    END
-    ELSE
-    BEGIN
-        -- Si no existe holdings, inicializar en cero
-        IF NOT EXISTS (SELECT 1 FROM Warehouse.StockItemHoldings_SJ WHERE StockItemID = @StockItemID)
-        BEGIN
-            INSERT INTO Warehouse.StockItemHoldings_SJ
-            (StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity, LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen)
-            VALUES (@StockItemID, 0, @Ubicacion, 0, 0, 0, 0, 1, SYSDATETIME());
-        END
-        UPDATE Warehouse.StockItemHoldings_SJ
-        SET 
-            BinLocation = @Ubicacion,
-            LastEditedBy = 1,
-            LastEditedWhen = SYSDATETIME()
-        WHERE StockItemID = @StockItemID;
-    END
+            DECLARE @CantidadActual INT;
+            SELECT @CantidadActual = QuantityOnHand 
+            FROM Warehouse.StockItemHoldings_SJ 
+            WHERE StockItemID = @StockItemID;
 
-    -- Actualizar grupos de stock
-    IF @StockGroupIDs IS NOT NULL
-    BEGIN
-        DELETE FROM Warehouse.StockItemStockGroups 
-        WHERE StockItemID = @StockItemID;
-        
-        IF @StockGroupIDs != ''
-        BEGIN
-            DECLARE @GroupID INT;
-            DECLARE @Pos INT = 1;
-            DECLARE @NextPos INT;
-            
-            WHILE @Pos <= LEN(@StockGroupIDs)
+            -- Si no existe holdings, inicializar en cero
+            IF @CantidadActual IS NULL
             BEGIN
-                SET @NextPos = CHARINDEX(',', @StockGroupIDs, @Pos);
-                IF @NextPos = 0
-                    SET @NextPos = LEN(@StockGroupIDs) + 1;
-                
-                SET @GroupID = CAST(SUBSTRING(@StockGroupIDs, @Pos, @NextPos - @Pos) AS INT);
-                
-                INSERT INTO Warehouse.StockItemStockGroups
-                (StockItemID, StockGroupID, LastEditedBy)
-                VALUES (@StockItemID, @GroupID, 1);
-                
-                SET @Pos = @NextPos + 1;
+                INSERT INTO Warehouse.StockItemHoldings_SJ
+                (StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity, LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen)
+                VALUES (@StockItemID, 0, @Ubicacion, 0, 0, 0, 0, 1, SYSDATETIME());
+                SET @CantidadActual = 0;
+            END
+
+            DECLARE @Diferencia INT = @CantidadDisponible - ISNULL(@CantidadActual, 0);
+
+            UPDATE Warehouse.StockItemHoldings_SJ
+            SET 
+                QuantityOnHand = @CantidadDisponible,
+                BinLocation = @Ubicacion,
+                LastEditedBy = 1,
+                LastEditedWhen = SYSDATETIME()
+            WHERE StockItemID = @StockItemID;
+
+            -- Registrar transacción si hubo cambio en cantidad
+            IF @Diferencia != 0
+            BEGIN
+                INSERT INTO Warehouse.StockItemTransactions_SJ
+                (
+                    StockItemID, TransactionTypeID, CustomerID, InvoiceID, SupplierID,
+                    PurchaseOrderID, TransactionOccurredWhen, Quantity, LastEditedBy, LastEditedWhen
+                )
+                VALUES
+                (
+                    @StockItemID, 
+                    CASE WHEN @Diferencia > 0 THEN 10 ELSE 11 END,
+                    NULL, NULL, @SupplierID, NULL, SYSDATETIME(),
+                    @Diferencia, 1, SYSDATETIME()
+                );
             END
         END
-    END
-    
-    SELECT @StockItemID AS UpdatedStockItemID;
+        ELSE
+        BEGIN
+            -- Si no existe holdings, inicializar en cero
+            IF NOT EXISTS (SELECT 1 FROM Warehouse.StockItemHoldings_SJ WHERE StockItemID = @StockItemID)
+            BEGIN
+                INSERT INTO Warehouse.StockItemHoldings_SJ
+                (StockItemID, QuantityOnHand, BinLocation, LastStocktakeQuantity, LastCostPrice, ReorderLevel, TargetStockLevel, LastEditedBy, LastEditedWhen)
+                VALUES (@StockItemID, 0, @Ubicacion, 0, 0, 0, 0, 1, SYSDATETIME());
+            END
+            UPDATE Warehouse.StockItemHoldings_SJ
+            SET 
+                BinLocation = @Ubicacion,
+                LastEditedBy = 1,
+                LastEditedWhen = SYSDATETIME()
+            WHERE StockItemID = @StockItemID;
+        END
+
+        -- Actualizar grupos de stock
+        IF @StockGroupIDs IS NOT NULL
+        BEGIN
+            DELETE FROM Warehouse.StockItemStockGroups 
+            WHERE StockItemID = @StockItemID;
+            
+            IF @StockGroupIDs != ''
+            BEGIN
+                DECLARE @GroupID INT;
+                DECLARE @Pos INT = 1;
+                DECLARE @NextPos INT;
+                
+                WHILE @Pos <= LEN(@StockGroupIDs)
+                BEGIN
+                    SET @NextPos = CHARINDEX(',', @StockGroupIDs, @Pos);
+                    IF @NextPos = 0
+                        SET @NextPos = LEN(@StockGroupIDs) + 1;
+                    
+                    SET @GroupID = CAST(SUBSTRING(@StockGroupIDs, @Pos, @NextPos - @Pos) AS INT);
+                    
+                    INSERT INTO Warehouse.StockItemStockGroups
+                    (StockItemID, StockGroupID, LastEditedBy)
+                    VALUES (@StockItemID, @GroupID, 1);
+                    
+                    SET @Pos = @NextPos + 1;
+                END
+            END
+        END
+        
+        SELECT @StockItemID AS UpdatedStockItemID;
+    COMMIT TRANSACTION;
 END
 GO
 
@@ -466,44 +472,46 @@ CREATE OR ALTER PROCEDURE SP_DeleteProduct
 AS
 BEGIN
     SET NOCOUNT ON;
-    
-    -- Eliminar relaciones con grupos de stock
-    DELETE FROM Warehouse.StockItemStockGroups 
-    WHERE StockItemID = @StockItemID;
-    
-    -- Ajustar cantidad a cero si hay existencias
-    DECLARE @CantidadActual INT;
-    SELECT @CantidadActual = QuantityOnHand 
-    FROM Warehouse.StockItemHoldings_SJ 
-    WHERE StockItemID = @StockItemID;
-    
-    IF @CantidadActual > 0
-    BEGIN
-        INSERT INTO Warehouse.StockItemTransactions_SJ
-        (
-            StockItemID, TransactionTypeID, TransactionOccurredWhen,
-            Quantity, LastEditedBy, LastEditedWhen
-        )
-        VALUES
-        (
-            @StockItemID, 11, SYSDATETIME(),
-            -@CantidadActual, 1, SYSDATETIME()
-        );
-    END
+    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+    BEGIN TRANSACTION;
+        -- Eliminar relaciones con grupos de stock
+        DELETE FROM Warehouse.StockItemStockGroups 
+        WHERE StockItemID = @StockItemID;
+        
+        -- Ajustar cantidad a cero si hay existencias
+        DECLARE @CantidadActual INT;
+        SELECT @CantidadActual = QuantityOnHand 
+        FROM Warehouse.StockItemHoldings_SJ 
+        WHERE StockItemID = @StockItemID;
+        
+        IF @CantidadActual > 0
+        BEGIN
+            INSERT INTO Warehouse.StockItemTransactions_SJ
+            (
+                StockItemID, TransactionTypeID, TransactionOccurredWhen,
+                Quantity, LastEditedBy, LastEditedWhen
+            )
+            VALUES
+            (
+                @StockItemID, 11, SYSDATETIME(),
+                -@CantidadActual, 1, SYSDATETIME()
+            );
+        END
 
-    -- Eliminar holdings de San José
-    DELETE FROM Warehouse.StockItemHoldings_SJ
-    WHERE StockItemID = @StockItemID;
-    
-    -- Eliminar transacciones de San José
-    DELETE FROM Warehouse.StockItemTransactions_SJ
-    WHERE StockItemID = @StockItemID;
+        -- Eliminar holdings de San José
+        DELETE FROM Warehouse.StockItemHoldings_SJ
+        WHERE StockItemID = @StockItemID;
+        
+        -- Eliminar transacciones de San José
+        DELETE FROM Warehouse.StockItemTransactions_SJ
+        WHERE StockItemID = @StockItemID;
 
-    -- Eliminar el producto (se replicará la eliminación)
-    DELETE FROM Warehouse.StockItems
-    WHERE StockItemID = @StockItemID;
-    
-    SELECT @StockItemID AS DeletedStockItemID;
+        -- Eliminar el producto (se replicará la eliminación)
+        DELETE FROM Warehouse.StockItems
+        WHERE StockItemID = @StockItemID;
+        
+        SELECT @StockItemID AS DeletedStockItemID;
+    COMMIT TRANSACTION;
 END
 GO
 
