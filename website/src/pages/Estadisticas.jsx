@@ -37,48 +37,50 @@ export default function Estadisticas() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  const load = async (
-    which = tab,
-    filtro = {
-      supplier,
-      supCat,
-      customer,
-      cusCat,
-      year,
-      fy,
-      ty,
-      sucursal,
-    }
-  ) => {
+  // Solo cargar datos al montar y al dar click en 'Aplicar' o 'Restaurar'
+  const load = async () => {
     setLoading(true);
     setErr("");
     try {
       let data = [];
-      if (which === TABS.COMPRAS) {
-        data = await api.compras(filtro.supplier.trim() || undefined, filtro.supCat.trim() || undefined, filtro.sucursal || undefined);
-      } else if (which === TABS.VENTAS) {
-        data = await api.ventas(filtro.customer.trim() || undefined, filtro.cusCat.trim() || undefined, filtro.sucursal || undefined);
-      } else if (which === TABS.TOP_PRODUCTOS) {
-        data = await api.topProductos(filtro.year ? Number(filtro.year) : undefined, filtro.sucursal || undefined);
-      } else if (which === TABS.TOP_CLIENTES) {
-        data = await api.topClientes(filtro.fy || undefined, filtro.ty || undefined, filtro.sucursal || undefined);
-      } else if (which === TABS.TOP_PROVEEDORES) {
-        data = await api.topProveedores(filtro.fy || undefined, filtro.ty || undefined, filtro.sucursal || undefined);
+      if (tab === TABS.COMPRAS) {
+        data = await api.compras(supplier.trim() || undefined, supCat.trim() || undefined, sucursal || undefined);
+      } else if (tab === TABS.VENTAS) {
+        data = await api.ventas(customer.trim() || undefined, cusCat.trim() || undefined, sucursal || undefined);
+      } else if (tab === TABS.TOP_PRODUCTOS) {
+        data = await api.topProductos(year ? Number(year) : undefined, sucursal || undefined);
+      } else if (tab === TABS.TOP_CLIENTES) {
+        data = await api.topClientes(fy || undefined, ty || undefined, sucursal || undefined);
+      } else if (tab === TABS.TOP_PROVEEDORES) {
+        data = await api.topProveedores(fy || undefined, ty || undefined, sucursal || undefined);
       }
       setRows(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
       setRows([]);
-      setErr("No se pudieron cargar las estaddsticas.");
+      setErr("No se pudieron cargar las estadísticas.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(TABS.COMPRAS); }, []);
-  useEffect(() => { load(tab); }, [tab]);
+  // Carga inicial al montar
+  useEffect(() => {
+    load();
+  }, []);
 
-  const clearAndReload = () => {
+  // Carga automática al cambiar de tab SOLO si no hay filtros activos
+  useEffect(() => {
+    const filters = [supplier, supCat, customer, cusCat, year, fy, ty, sucursal];
+    const hasFilters = filters.some(f => f && String(f).trim() !== "");
+    if (!hasFilters) {
+      load();
+    }
+    // Si hay filtros, solo se carga al dar 'Aplicar'
+    // eslint-disable-next-line
+  }, [tab]);
+
+  const onRestore = () => {
     setSupplier("");
     setSupCat("");
     setCustomer("");
@@ -87,16 +89,9 @@ export default function Estadisticas() {
     setFy("");
     setTy("");
     setSucursal("");
-    load(tab, {
-      supplier: "",
-      supCat: "",
-      customer: "",
-      cusCat: "",
-      year: "",
-      fy: "",
-      ty: "",
-      sucursal: "",
-    });
+    setRows([]);
+    setErr("");
+    load();
   };
 
   const renderTableHead = () => {
@@ -333,7 +328,7 @@ export default function Estadisticas() {
           <button className="btn primary" onClick={load} disabled={loading}>
             {loading ? "Cargando..." : "Aplicar"}
           </button>
-          <button className="btn ghost" onClick={clearAndReload}>
+          <button className="btn ghost" onClick={onRestore}>
             <FaSyncAlt /> <span>Restaurar</span>
           </button>
         </section>

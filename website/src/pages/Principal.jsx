@@ -68,9 +68,6 @@ export default function Principal() {
 
   return (
     <section className="carreras-destacadas">
-      <div className="brand-logo">
-        <img src={logo} alt="Wide World Importers" />
-      </div>
       <div className="carreras-container">
         <h2 className="carreras-title">Wide World Importers</h2>
         <p className="carreras-subtitle">

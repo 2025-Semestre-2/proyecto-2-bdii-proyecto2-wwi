@@ -471,7 +471,7 @@ BEGIN
         WHERE (@supplier IS NULL OR SupplierName LIKE '%' + @supplier + '%')
           AND (@category IS NULL OR SupplierCategoryName LIKE '%' + @category + '%')
         GROUP BY ROLLUP (SupplierName, SupplierCategoryName, Sucursal)
-        ORDER BY monto_total DESC;
+        ORDER BY SupplierName, SupplierCategoryName, Sucursal;
     END
     ELSE
     BEGIN
